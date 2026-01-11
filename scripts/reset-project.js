@@ -33,10 +33,11 @@ export default function Index() {
 }
 `;
 
-const layoutContent = `import { Stack } from "expo-router";
+const layoutContent = `import React from "react";
 
 export default function RootLayout() {
-  return <Stack />;
+  // Router disabled — return null layout when resetting project
+  return null;
 }
 `;
 
