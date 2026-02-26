@@ -64,42 +64,11 @@ type RequestsContextType = {
 
 const RequestsContext = createContext<RequestsContextType | undefined>(undefined);
 
-const seed: Request[] = [
-  {
-    id: 'r1',
-    category: 'Plastic',
-    quantity: 2,
-    unit: 'kg',
-    pickupType: 'pickup',
-    selectedPartner: { id: 'p1', name: 'GreenCycle Foundation' },
-    status: 'Accepted',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    timeline: [
-      { status: 'Submitted', at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-      { status: 'Accepted', at: new Date(Date.now() - 1000 * 60 * 60 * 23).toISOString() },
-    ],
-  },
-  {
-    id: 'r2',
-    category: 'Cloth',
-    quantity: 1,
-    unit: 'kg',
-    pickupType: 'dropoff',
-    selectedPartner: { id: 'p2', name: 'RePlast India' },
-    status: 'Completed',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    timeline: [
-      { status: 'Submitted', at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
-      { status: 'Accepted', at: new Date(Date.now() - 1000 * 60 * 60 * 47).toISOString() },
-      { status: 'In Progress', at: new Date(Date.now() - 1000 * 60 * 60 * 46).toISOString() },
-      { status: 'Completed', at: new Date(Date.now() - 1000 * 60 * 60 * 45).toISOString() },
-    ],
-  },
-];
+const seed: Request[] = [];
 
 export const RequestsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [requests, setRequests] = useState<Request[]>(seed);
-  const [points, setPoints] = useState<number>(1240);
+  const [points, setPoints] = useState<number>(0);
   const [redeemed, setRedeemed] = useState<RedeemedReward[]>([]);
 
   // Load saved requests, points and redeemed rewards from AsyncStorage if available

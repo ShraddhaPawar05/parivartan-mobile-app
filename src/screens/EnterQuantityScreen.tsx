@@ -1,16 +1,66 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { BackButton } from '../components';
 import ProgressBar from '../components/ProgressBar';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useUploadFlow } from '../context/UploadFlowContext';
+import * as ImagePicker from 'expo-image-picker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const EnterQuantityScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const [quantity, setQuantity] = useState(1);
 
-  const { setQuantity: setFlowQuantity } = useUploadFlow();
+  const { setQuantity: setFlowQuantity, category, imageUrl, setImageUrl } = useUploadFlow();
+
+  console.log('📦 EnterQuantity - Waste type from context:', category);
+  console.log('📸 EnterQuantity - Image URL from context:', imageUrl);
+
+  // If no category, go back to identify screen
+  React.useEffect(() => {
+    if (!category) {
+      console.log('⚠️ No waste type selected, redirecting to Identify');
+      navigation.navigate('IdentifyStart');
+    }
+  }, [category, navigation]);
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Camera permission is required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setImageUrl(result.assets[0].uri);
+        console.log('📸 Photo captured:', result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      alert('Failed to take photo');
+    }
+  };
+
+  if (!category) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.container}>
+          <Text style={{textAlign: 'center', color: '#6b7280'}}>Loading...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  const wasteTypeDisplay = `${category.charAt(0).toUpperCase() + category.slice(1)} Waste`;
 
   return (
     <ScreenWrapper>
@@ -22,12 +72,17 @@ const EnterQuantityScreen: React.FC = () => {
 
         <View style={styles.itemCard}>
           <View style={styles.itemLeft}>
-            <View style={styles.thumb} />
-            <View style={{marginLeft: 12}}>
-              <Text style={styles.itemTitle}>Plastic Waste</Text>
-              <Text style={styles.itemSub}>HIGH CONFIDENCE</Text>
+            <TouchableOpacity onPress={handleTakePhoto} style={styles.thumb}>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.thumbImage} />
+              ) : (
+                <MaterialCommunityIcons name="camera" size={24} color="#10b981" />
+              )}
+            </TouchableOpacity>
+            <View style={{marginLeft: 12, flex: 1}}>
+              <Text style={styles.itemTitle}>{wasteTypeDisplay}</Text>
+              <Text style={styles.itemSub}>{imageUrl ? 'TAP IMAGE TO RETAKE' : 'TAP TO ADD PHOTO'}</Text>
             </View>
-            <TouchableOpacity style={styles.edit}><Text>✎</Text></TouchableOpacity>
           </View>
         </View>
 
@@ -59,9 +114,22 @@ const styles = StyleSheet.create({
   title: { textAlign: 'center', fontSize: 20, fontWeight: '800', marginBottom: 18 },
   itemCard: { backgroundColor:'#fff', borderRadius:12, padding:12 },
   itemLeft: { flexDirection:'row', alignItems:'center' },
-  thumb: { width:44, height:44, borderRadius:22, backgroundColor:'#f3f4f6' },
+  thumb: { 
+    width:64, 
+    height:64, 
+    borderRadius:12, 
+    backgroundColor:'#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden'
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12
+  },
   itemTitle: { fontWeight:'700' },
-  itemSub: { color:'#10b981', fontWeight:'700', marginTop:6 },
+  itemSub: { color:'#10b981', fontWeight:'600', marginTop:6, fontSize: 11 },
   edit: { marginLeft:'auto' },
   toggles: { flexDirection:'row', backgroundColor:'#fff', padding:6, borderRadius:999, marginTop:30, alignSelf:'center' },
   unit: { paddingHorizontal:18, paddingVertical:8, borderRadius:999, marginHorizontal:4 },

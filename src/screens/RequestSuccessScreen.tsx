@@ -21,7 +21,7 @@ const RequestSuccessScreen: React.FC = ({ route }: any) => {
 
         <TouchableOpacity style={styles.home} onPress={() => {
           // trigger Identify stack reset (by passing fresh param) then navigate home
-          navigation.getParent()?.navigate('Identify', { screen: 'Identify', params: { _fresh: Date.now() } });
+          navigation.getParent()?.navigate('Identify', { screen: 'IdentifyStart', params: { _fresh: Date.now() } });
           navigation.getParent()?.navigate('Home');
         }}>
           <Text style={styles.homeText}>Back to Home</Text>

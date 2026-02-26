@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Animated,
   ScrollView,
@@ -14,23 +14,105 @@ import ScreenWrapper from '../components/ScreenWrapper';
 import Card from '../components/ui/Card';
 import { getWasteIcon } from '../constants/wasteIcons';
 import { useRequests } from '../context';
+import { useAuth } from '../context/AuthContext';
+import { getActiveRequest, getUserRequests, WasteRequest, subscribeToUserRequests } from '../services/requestService';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
-  const HomeScreen: React.FC = () => {
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good Morning';
+  if (hour >= 12 && hour < 17) return 'Good Afternoon';
+  if (hour >= 17 && hour < 22) return 'Good Evening';
+  return 'Good Night';
+};
+
+const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const { points } = useRequests();
+  const { user } = useAuth();
+  const [activeRequest, setActiveRequest] = useState<WasteRequest | null>(null);
+  const [recentRequests, setRecentRequests] = useState<WasteRequest[]>([]);
+  const [fullName, setFullName] = useState<string>('');
+  const [ecoPoints, setEcoPoints] = useState<number>(0);
 
-  const [displayPoints, setDisplayPoints] = React.useState<number>(points);
-  const animPoints = React.useRef(new Animated.Value(points)).current;
+  // Subscribe to user data from Firestore
   React.useEffect(() => {
-    Animated.timing(animPoints, { toValue: points, duration: 700, useNativeDriver: false }).start();
+    if (!user?.uid) return;
+
+    console.log('🔵 HomeScreen: Subscribing to user document:', user.uid);
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log('✅ HomeScreen: User data updated, ecoPoints:', data.ecoPoints);
+        setFullName(data.fullName || '');
+        setEcoPoints(data.ecoPoints ?? 0);
+      } else {
+        console.log('⚠️ HomeScreen: User document does not exist');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  const loadRequestData = useCallback(async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const active = await getActiveRequest(user.uid);
+      setActiveRequest(active);
+      
+      const allRequests = await getUserRequests(user.uid);
+      const recent = allRequests.slice(0, 2); // Show 2 most recent
+      setRecentRequests(recent);
+    } catch (error) {
+      // Silent fail
+    }
+  }, [user?.uid]);
+
+  // Set up real-time subscription
+  React.useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = subscribeToUserRequests(
+      user.uid,
+      (updatedRequests) => {
+        // Find active request (not Completed or cancelled)
+        const active = updatedRequests.find(req => req.status !== 'Completed' && req.status !== 'cancelled');
+        setActiveRequest(active || null);
+        
+        // Get recent requests
+        const recent = updatedRequests.slice(0, 2);
+        setRecentRequests(recent);
+      },
+      (error) => {
+        // Silent fail
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  const [displayPoints, setDisplayPoints] = React.useState<number>(ecoPoints);
+  const animPoints = React.useRef(new Animated.Value(ecoPoints)).current;
+  React.useEffect(() => {
+    Animated.timing(animPoints, { toValue: ecoPoints, duration: 700, useNativeDriver: false }).start();
     const id = animPoints.addListener(({ value }: { value: number }) => setDisplayPoints(Math.round(value)));
     return () => animPoints.removeListener(id);
-  }, [points]);
+  }, [ecoPoints]);
 
-  const recent = [
-    { id: '1', category: 'Plastic', title: 'Plastic Waste Pickup', subtitle: 'Today, 10:30 AM', points: '+50 pts', status: 'Completed' },
-    { id: '2', category: 'E-waste', title: 'E-Waste Drop-off', subtitle: 'Yesterday', points: '', status: 'Pending' },
-  ];
+  const greeting = getGreeting();
+  const firstName = fullName.split(' ')[0] || 'User';
+
+  const recent = recentRequests.map(req => ({
+    id: req.id,
+    category: req.type || req.wasteType || 'General',
+    title: `${req.type || req.wasteType || 'Waste'} Waste ${req.status === 'pending' ? 'Pickup' : 'Request'}`,
+    subtitle: new Date(req.createdAt?.toDate?.() || req.createdAt).toLocaleDateString(),
+    points: req.status === 'completed' ? '+50 pts' : '',
+    status: req.status === 'pending' ? 'Pending' : req.status.charAt(0).toUpperCase() + req.status.slice(1)
+  }));
 
   return (
     <ScreenWrapper>
@@ -39,16 +121,16 @@ import { useRequests } from '../context';
         <View style={styles.headerRow}>
           <View style={styles.avatarRow}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>P</Text>
+              <Text style={styles.avatarInitial}>{firstName.charAt(0).toUpperCase()}</Text>
               <View style={styles.onlineDot} />
             </View>
             <View style={styles.greetingCol}>
-              <Text style={styles.greetingSmall}>Good Morning,</Text>
-              <Text style={styles.greetingName}>Priya!</Text>
+              <Text style={styles.greetingSmall}>{greeting},</Text>
+              <Text style={styles.greetingName}>{firstName}!</Text>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.bell} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.bell} activeOpacity={0.8} onPress={() => (navigation as any).navigate('Notifications')}>
             <Feather name="bell" size={20} color="#111827" />
             <View style={styles.bellDot} />
           </TouchableOpacity>
@@ -69,10 +151,7 @@ import { useRequests } from '../context';
 
           <Animated.Text style={styles.pointsAmount}>{displayPoints.toLocaleString()}</Animated.Text>
 
-          <Text style={styles.impactLabel}>Your monthly impact</Text>
-          <Text style={styles.impactText}>You've saved 12kg of CO2!</Text>
-
-          <TouchableOpacity style={styles.viewDetails} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.viewDetails} activeOpacity={0.9} onPress={() => (navigation as any).navigate('MyImpact')}>
             <Text style={styles.viewDetailsText}>View Details  →</Text>
           </TouchableOpacity>
         </LinearGradient>
@@ -122,7 +201,7 @@ Impact</Text>
           <Text style={styles.viewAll}>View All</Text>
         </View>
 
-        {recent.map(item => {
+        {recent.length > 0 ? recent.map(item => {
           const icon = getWasteIcon(item.category);
           return (
             <View key={item.id} style={styles.activityItem}>
@@ -142,7 +221,11 @@ Impact</Text>
               </View>
             </View>
           );
-        })}
+        }) : (
+          <View style={styles.activityItem}>
+            <Text style={{color: '#6b7280', textAlign: 'center', width: '100%'}}>No recent activity</Text>
+          </View>
+        )}
 
         <View style={{height: 120}} />
       </ScrollView>
@@ -190,7 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 22,
     paddingHorizontal: 20,
-    marginBottom: 28, // increased spacing to separate from Daily Eco-Tips
+    marginBottom: 28,
     shadowColor: '#000',
     shadowOpacity: 0.18,
     shadowRadius: 18,
@@ -199,8 +282,6 @@ const styles = StyleSheet.create({
   pointsHeader: { flexDirection: 'row', alignItems: 'center' },
   pointsTitle: { color: 'rgba(255,255,255,0.95)', fontSize: 12, fontWeight: '800', marginLeft: 10, letterSpacing: 0.6 },
   pointsAmount: { color: '#fff', fontSize: 56, fontWeight: '900', marginTop: 6 },
-  impactLabel: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 8 },
-  impactText: { color: 'rgba(255,255,255,0.95)', fontWeight: '800', marginTop: 6 },
   viewDetails: { backgroundColor: '#fff', paddingVertical: 12, paddingHorizontal: 22, borderRadius: 999, alignSelf: 'center', marginTop: 16, width: '70%', alignItems: 'center' },
   viewDetailsText: { color: '#065f46', fontWeight: '800', textAlign: 'center' },
 

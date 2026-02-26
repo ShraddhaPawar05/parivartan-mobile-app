@@ -1,14 +1,19 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BackButton } from '../components';
 import ProgressBar from '../components/ProgressBar';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useUploadFlow } from '../context/UploadFlowContext';
+import { useAuth } from '../context/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 const PickupAddressScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const { pickupAddress, setPickupAddress } = useUploadFlow();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
 
   const [editing, setEditing] = useState(!pickupAddress);
   const [house, setHouse] = useState(pickupAddress?.house ?? '');
@@ -16,6 +21,38 @@ const PickupAddressScreen: React.FC = () => {
   const [city, setCity] = useState(pickupAddress?.city ?? '');
   const [pincode, setPincode] = useState(pickupAddress?.pincode ?? '');
   const [landmark, setLandmark] = useState(pickupAddress?.landmark ?? '');
+
+  // Auto-load user's default location from Firestore
+  useEffect(() => {
+    const loadDefaultLocation = async () => {
+      if (pickupAddress || !user?.uid) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        const userLocation = userData?.location;
+
+        if (userLocation) {
+          setPickupAddress(userLocation);
+          setHouse(userLocation.house);
+          setStreet(userLocation.street);
+          setCity(userLocation.city);
+          setPincode(userLocation.pincode);
+          setLandmark(userLocation.landmark || '');
+          setEditing(false);
+        }
+      } catch (error) {
+        console.error('Error loading default location:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDefaultLocation();
+  }, [user?.uid, pickupAddress, setPickupAddress]);
 
   const onContinue = () => {
     // basic validation
@@ -26,6 +63,16 @@ const PickupAddressScreen: React.FC = () => {
     setPickupAddress({ house, street, city, pincode, landmark });
     navigation.navigate('NearbyHelpers');
   };
+
+  if (loading) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.container}>
+          <Text style={{textAlign: 'center', marginTop: 20}}>Loading address...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>

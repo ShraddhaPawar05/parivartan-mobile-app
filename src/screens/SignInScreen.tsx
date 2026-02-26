@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import ScreenWrapper from '../components/ScreenWrapper';
-import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import React, { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { auth } from '../firebase/firebase';
+import { createUserProfileIfNotExists } from '../services/userService';
 
 const SignInScreen: React.FC = () => {
-  const { signIn } = useAuth();
   const navigation: any = useNavigation();
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const canContinue = email.trim() && password.trim();
 
   const onContinue = async () => {
-    if (!identifier) return alert('Enter phone or email');
-    await signIn(identifier);
+    if (!canContinue) {
+      Alert.alert('Error', 'Enter both email and password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Create user profile if it doesn't exist
+      await createUserProfileIfNotExists(userCredential.user.uid, email);
+      console.log('Sign in successful');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,10 +44,31 @@ const SignInScreen: React.FC = () => {
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Continue your recycling journey</Text>
 
-        <TextInput value={identifier} onChangeText={setIdentifier} placeholder="Phone or email" style={styles.input} keyboardType="default" />
+        <TextInput 
+          value={email} 
+          onChangeText={setEmail} 
+          placeholder="Email address" 
+          placeholderTextColor="#6B7280"
+          style={styles.input} 
+          keyboardType="email-address" 
+          autoCapitalize="none" 
+        />
 
-        <TouchableOpacity style={styles.primary} onPress={onContinue}>
-          <Text style={styles.primaryText}>Continue</Text>
+        <TextInput 
+          value={password} 
+          onChangeText={setPassword} 
+          placeholder="Password" 
+          placeholderTextColor="#6B7280"
+          style={styles.input} 
+          secureTextEntry 
+        />
+
+        <TouchableOpacity onPress={() => alert('Forgot password flow coming soon')}>
+          <Text style={{ color: '#6b7280', marginTop: 8, alignSelf: 'flex-end' }}>Forgot password?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.primary, (!canContinue || loading) ? { opacity: 0.5 } : null]} onPress={onContinue} disabled={!canContinue || loading}>
+          <Text style={styles.primaryText}>{loading ? 'Signing in...' : 'Continue'}</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomRow}>
@@ -48,7 +88,20 @@ const styles = StyleSheet.create({
   logoCircle: { width: 72, height: 72, borderRadius: 18, backgroundColor: '#f3fef6', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 22, fontWeight: '800', marginTop: 6, textAlign: 'center' },
   subtitle: { color: '#6b7280', marginTop: 6, textAlign: 'center' },
-  input: { width: '100%', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginTop: 16, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 1 },
+  input: { 
+    width: '100%', 
+    backgroundColor: '#fff', 
+    color: '#111827',
+    padding: 14, 
+    borderRadius: 12, 
+    marginTop: 16, 
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000', 
+    shadowOpacity: 0.03, 
+    shadowRadius: 6, 
+    elevation: 1 
+  },
   primary: { width: '100%', backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 999, alignItems: 'center', marginTop: 18 },
   primaryText: { color: '#fff', fontWeight: '800' },
   bottomRow: { flexDirection: 'row', marginTop: 18, justifyContent: 'center' },
