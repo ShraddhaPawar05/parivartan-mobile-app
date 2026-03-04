@@ -6,6 +6,8 @@ import { useRequests } from '../context';
 import { useAuth } from '../context/AuthContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ProfileScreen: React.FC = () => {
   const { redeemed } = useRequests();
@@ -19,7 +21,6 @@ const ProfileScreen: React.FC = () => {
   const [completedRequests, setCompletedRequests] = React.useState<number>(0);
   const [totalKg, setTotalKg] = React.useState<number>(0);
 
-  // Subscribe to user data from Firestore
   React.useEffect(() => {
     if (!user?.uid) return;
 
@@ -40,7 +41,6 @@ const ProfileScreen: React.FC = () => {
     return () => unsubscribe();
   }, [user?.uid, user?.email]);
 
-  // Fetch real request data from Firestore
   React.useEffect(() => {
     if (!user?.uid) return;
 
@@ -64,9 +64,6 @@ const ProfileScreen: React.FC = () => {
     fetchRequests();
   }, [user?.uid]);
 
-  const cardBg = '#fff';
-  const mutedText = '#6b7280';
-
   const { signOut } = useAuth();
 
   const [location, setLocation] = React.useState<any>(null);
@@ -76,7 +73,6 @@ const ProfileScreen: React.FC = () => {
   React.useEffect(() => {
     (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const raw = await AsyncStorage.getItem('@parivartan:location');
         if (raw) {
@@ -92,7 +88,6 @@ const ProfileScreen: React.FC = () => {
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const raw = await AsyncStorage.getItem('@parivartan:location');
         if (raw) {
@@ -108,125 +103,178 @@ const ProfileScreen: React.FC = () => {
 
   return (
   <ScreenWrapper>
-    <ScrollView contentContainerStyle={{padding:20, paddingBottom: 140}} showsVerticalScrollIndicator={false}>
-      {/* User Info */}
-      <Text style={[styles.sectionHeader, {marginTop:0}]}>User Info</Text>
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
+      </View>
 
-      <View style={[styles.profileRow, {marginTop:6}]}>
-        <View style={styles.avatar}><Text style={{fontWeight:'800', fontSize:18}}>{firstName.charAt(0).toUpperCase()}</Text></View>
-        <View style={{marginLeft:12}}>
-          <Text style={{fontWeight:'800', fontSize:18}}>{fullName || 'User'}</Text>
-          <Text style={{color:mutedText, marginTop:6}}>{email}</Text>
-          <Text style={{fontWeight:'800', marginTop:8, color:'#10b981'}}>{ecoPoints.toLocaleString()} EcoPoints</Text>
+      {/* User Card */}
+      <LinearGradient colors={['#10b981', '#059669']} start={[0,0]} end={[1,1]} style={styles.userCard}>
+        <MaterialCommunityIcons name="leaf" size={120} color="rgba(255,255,255,0.08)" style={{position:'absolute', right:-20, top:-20}} />
+        <View style={styles.avatarLarge}>
+          <Text style={styles.avatarText}>{firstName.charAt(0).toUpperCase()}</Text>
+        </View>
+        <Text style={styles.userName}>{fullName || 'User'}</Text>
+        <Text style={styles.userEmail}>{email}</Text>
+        <View style={styles.pointsBadge}>
+          <MaterialCommunityIcons name="star-circle" size={16} color="#f59e0b" />
+          <Text style={styles.pointsText}>{ecoPoints.toLocaleString()} EcoPoints</Text>
+        </View>
+      </LinearGradient>
+
+      {/* Stats Grid */}
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <MaterialCommunityIcons name="recycle" size={28} color="#10b981" />
+          <Text style={styles.statValue}>{totalRequests}</Text>
+          <Text style={styles.statLabel}>Total Requests</Text>
+        </View>
+        <View style={styles.statCard}>
+          <MaterialCommunityIcons name="check-circle" size={28} color="#3b82f6" />
+          <Text style={styles.statValue}>{completedRequests}</Text>
+          <Text style={styles.statLabel}>Completed</Text>
+        </View>
+        <View style={styles.statCard}>
+          <MaterialCommunityIcons name="weight-kilogram" size={28} color="#f59e0b" />
+          <Text style={styles.statValue}>{totalKg.toFixed(1)}</Text>
+          <Text style={styles.statLabel}>kg Recycled</Text>
         </View>
       </View>
 
-      <View style={{height: 16}} />
-      <View style={styles.divider} />
-
-      {/* Insights */}
-      <Text style={styles.sectionHeader}>Insights</Text>
-      <View style={{flexDirection:'row', justifyContent:'space-between'}}>
-        <View style={[styles.card, {flex:1, marginRight:8, backgroundColor: cardBg}]}>
-          <Text style={{color:mutedText}}>Requests</Text>
-          <Text style={{fontWeight:'800', marginTop:6}}>{totalRequests}</Text>
-        </View>
-        <View style={[styles.card, {flex:1, marginLeft:8, backgroundColor: cardBg}]}>
-          <Text style={{color:mutedText}}>Completed</Text>
-          <Text style={{fontWeight:'800', marginTop:6}}>{completedRequests}</Text>
-        </View>
-      </View>
-
-      {totalKg > 0 && (
-        <>
-          <View style={{height:12}} />
-          <View style={[styles.card, {backgroundColor: cardBg}]}>
-            <Text style={{color:mutedText}}>Total Collected</Text>
-            <Text style={{fontWeight:'800', marginTop:6}}>{totalKg.toFixed(1)} kg</Text>
+      {/* Account Section */}
+      <Text style={styles.sectionTitle}>Account Settings</Text>
+      
+      <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Home', { screen: 'EditProfile' })}>
+        <View style={styles.menuLeft}>
+          <View style={[styles.menuIcon, {backgroundColor: '#dbeafe'}]}>
+            <MaterialCommunityIcons name="account-edit" size={20} color="#1e40af" />
           </View>
-        </>
-      )}
-
-      <View style={{height:12}} />
-      <View style={styles.divider} />
-
-      {/* Account */}
-      <Text style={styles.sectionHeader}>Account</Text>
-      <TouchableOpacity style={styles.action} onPress={() => (navigation as any).navigate('Home', { screen: 'EditProfile' })}>
-        <Text style={{fontWeight:'800'}}>Edit Profile</Text>
+          <Text style={styles.menuText}>Edit Profile</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.action, {marginTop:12}]} onPress={() => navigation.navigate('Rewards' as never)}><Text style={{fontWeight:'800'}}>Rewards</Text></TouchableOpacity>
+      <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Rewards' as never)}>
+        <View style={styles.menuLeft}>
+          <View style={[styles.menuIcon, {backgroundColor: '#fef3c7'}]}>
+            <MaterialCommunityIcons name="gift" size={20} color="#92400e" />
+          </View>
+          <Text style={styles.menuText}>Rewards</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
+      </TouchableOpacity>
 
-      <View style={{height:12}} />
+      <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Home', { screen: 'MyImpact' })}>
+        <View style={styles.menuLeft}>
+          <View style={[styles.menuIcon, {backgroundColor: '#ecfdf5'}]}>
+            <MaterialCommunityIcons name="chart-line" size={20} color="#059669" />
+          </View>
+          <Text style={styles.menuText}>My Impact</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
+      </TouchableOpacity>
 
-      <View style={[styles.card, {paddingVertical:10, paddingHorizontal:12}]}> 
-        <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
+      {/* Location Card */}
+      <View style={styles.locationCard}>
+        <View style={styles.locationHeader}>
+          <MaterialCommunityIcons name="map-marker" size={20} color="#10b981" />
+          <Text style={styles.locationTitle}>Pickup Location</Text>
+        </View>
+        <Text style={styles.locationText}>
+          {location ? `${location.house}, ${location.street}, ${location.city} - ${location.pincode}` : 'Not set'}
+        </Text>
+        <TouchableOpacity style={styles.editLocationBtn} onPress={() => (navigation as any).navigate('Home', { screen: 'LocationSetup' })}>
+          <Text style={styles.editLocationText}>Edit Location</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Preferences */}
+      <Text style={styles.sectionTitle}>Preferences</Text>
+      
+      <View style={styles.themeCard}>
+        <View style={styles.themeLeft}>
+          <View style={[styles.menuIcon, {backgroundColor: '#f3f4f6'}]}>
+            <MaterialCommunityIcons name={isDark ? "moon-waning-crescent" : "white-balance-sunny"} size={20} color="#374151" />
+          </View>
           <View>
-            <Text style={{fontWeight:'800'}}>Theme</Text>
-            <Text style={{color:mutedText, marginTop:4}}>Switch between Light and Dark</Text>
-          </View>
-          <View style={{alignItems:'center'}}>
-            <Text style={{marginBottom:6}}>{isDark ? 'Dark' : 'Light'}</Text>
-            <Switch value={isDark} onValueChange={(v) => setIsDark(v)} />
+            <Text style={styles.menuText}>Theme</Text>
+            <Text style={styles.themeSubtext}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
           </View>
         </View>
+        <Switch value={isDark} onValueChange={setIsDark} trackColor={{true: '#10b981', false: '#d1d5db'}} />
       </View>
-
-      <View style={{height:12}} />
-
-      <View style={[styles.card, {padding:12, marginTop:12}]}> 
-        <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
-          <View style={{flex:1, marginRight:12}}>
-            <Text style={{fontWeight:'800'}}>Pickup location</Text>
-            <Text style={{color:mutedText, marginTop:6}}>
-              {location ? `${location.house}, ${location.street}, ${location.city} - ${location.pincode}` : 'Not set'}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => (navigation as any).navigate('Home', { screen: 'LocationSetup' })}>
-            <Text style={{color:'#10b981', fontWeight:'800'}}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={{height:12}} />
 
       {/* Recently Redeemed */}
       {redeemed && redeemed.length > 0 && (
-        <View style={{marginTop:6}}>
-          <Text style={styles.sectionHeader}>Recently Redeemed</Text>
+        <>
+          <Text style={styles.sectionTitle}>Recently Redeemed</Text>
           {redeemed.map(r => (
-            <View key={r.id} style={[styles.card, {padding:12, borderRadius:10, marginTop:12, backgroundColor: cardBg}]}>
-              <Text style={{fontWeight:'800'}}>{r.title}</Text>
-              <Text style={{color:mutedText, marginTop:6}}>Redeemed on {new Date(r.redeemedAt).toLocaleString()}</Text>
+            <View key={r.id} style={styles.redeemCard}>
+              <MaterialCommunityIcons name="gift" size={24} color="#10b981" />
+              <View style={{flex: 1, marginLeft: 12}}>
+                <Text style={styles.redeemTitle}>{r.title}</Text>
+                <Text style={styles.redeemDate}>{new Date(r.redeemedAt).toLocaleDateString()}</Text>
+              </View>
             </View>
           ))}
-        </View>
+        </>
       )}
 
-      <View style={{height:20}} />
-      <View style={styles.divider} />
-
-      {/* Logout - MUST be last */}
-      <TouchableOpacity onPress={async () => { await signOut(); }} style={styles.logoutWrap}>
-        <Text style={styles.logoutText}>Log out</Text>
+      {/* Logout */}
+      <TouchableOpacity onPress={async () => { await signOut(); }} style={styles.logoutBtn}>
+        <MaterialCommunityIcons name="logout" size={20} color="#ef4444" />
+        <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
+      <View style={{height: 100}} />
     </ScrollView>
   </ScreenWrapper>
 );
 };
 
 const styles = StyleSheet.create({
-  sectionHeader: { fontSize:16, fontWeight:'800', marginBottom:12, marginTop:18 },
-  profileRow: { flexDirection:'row', alignItems:'center' },
-  topRow: { flexDirection:'row', alignItems:'center' },
-  avatar: { width:64, height:64, borderRadius:32, backgroundColor:'#fff', alignItems:'center', justifyContent:'center', shadowColor:'#000', shadowOpacity:0.04, shadowRadius:6, elevation:2 },
-  card: { backgroundColor:'#fff', padding:12, borderRadius:12 },
-  divider: { height:1, backgroundColor:'rgba(0,0,0,0.06)', marginVertical:14, borderRadius:1 },
-  action: { backgroundColor:'#fff', padding:14, borderRadius:12 },
-  logoutWrap: { marginTop:24, marginBottom:48, backgroundColor:'#fff', padding:14, borderRadius:10, alignItems:'center' },
-  logoutText: { color:'#ef4444', fontWeight:'700' }
+  container: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 },
+  header: { marginBottom: 20 },
+  headerTitle: { fontSize: 28, fontWeight: '900', color: '#111827' },
+
+  userCard: { borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  avatarLarge: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  avatarText: { fontSize: 32, fontWeight: '900', color: '#10b981' },
+  userName: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 8 },
+  userEmail: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+  pointsBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginTop: 16, gap: 6 },
+  pointsText: { fontSize: 14, fontWeight: '800', color: '#111827' },
+
+  statsGrid: { flexDirection: 'row', gap: 10, marginBottom: 24 },
+  statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  statValue: { fontSize: 20, fontWeight: '900', color: '#111827', marginTop: 8 },
+  statLabel: { fontSize: 11, color: '#6b7280', marginTop: 4, textAlign: 'center' },
+
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 12, marginTop: 8 },
+
+  menuItem: { backgroundColor: '#fff', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
+  menuLeft: { flexDirection: 'row', alignItems: 'center' },
+  menuIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  menuText: { fontSize: 15, fontWeight: '700', color: '#111827' },
+
+  locationCard: { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  locationHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  locationTitle: { fontSize: 15, fontWeight: '800', color: '#111827', marginLeft: 8 },
+  locationText: { fontSize: 13, color: '#6b7280', lineHeight: 20, marginBottom: 12 },
+  editLocationBtn: { backgroundColor: '#ecfdf5', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, alignSelf: 'flex-start' },
+  editLocationText: { fontSize: 13, fontWeight: '700', color: '#10b981' },
+
+  themeCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
+  themeLeft: { flexDirection: 'row', alignItems: 'center' },
+  themeSubtext: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+
+  redeemCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
+  redeemTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  redeemDate: { fontSize: 12, color: '#6b7280', marginTop: 4 },
+
+  logoutBtn: { backgroundColor: '#fff', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 24, borderWidth: 1, borderColor: '#fee2e2', gap: 8 },
+  logoutText: { fontSize: 15, fontWeight: '800', color: '#ef4444' }
 });
 
 export default ProfileScreen;

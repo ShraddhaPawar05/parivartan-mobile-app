@@ -16,7 +16,7 @@ import { getWasteIcon } from '../constants/wasteIcons';
 import { useRequests } from '../context';
 import { useAuth } from '../context/AuthContext';
 import { getActiveRequest, getUserRequests, WasteRequest, subscribeToUserRequests } from '../services/requestService';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
 const getGreeting = () => {
@@ -29,12 +29,13 @@ const getGreeting = () => {
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { points } = useRequests();
+  const { points, requests } = useRequests();
   const { user } = useAuth();
   const [activeRequest, setActiveRequest] = useState<WasteRequest | null>(null);
   const [recentRequests, setRecentRequests] = useState<WasteRequest[]>([]);
   const [fullName, setFullName] = useState<string>('');
   const [ecoPoints, setEcoPoints] = useState<number>(0);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   // Subscribe to user data from Firestore
   React.useEffect(() => {
@@ -51,6 +52,24 @@ const HomeScreen: React.FC = () => {
       } else {
         console.log('⚠️ HomeScreen: User document does not exist');
       }
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  // Subscribe to unread notifications
+  React.useEffect(() => {
+    if (!user?.uid) return;
+
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userId', '==', user.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.size);
     });
 
     return () => unsubscribe();
@@ -132,7 +151,7 @@ const HomeScreen: React.FC = () => {
 
           <TouchableOpacity style={styles.bell} activeOpacity={0.8} onPress={() => (navigation as any).navigate('Notifications')}>
             <Feather name="bell" size={20} color="#111827" />
-            <View style={styles.bellDot} />
+            {unreadCount > 0 && <View style={styles.bellDot} />}
           </TouchableOpacity>
         </View>
 
@@ -176,29 +195,48 @@ Impact</Text>
         </View>
 
         {/* Daily Eco-Tips */}
-        <Text style={[styles.sectionTitle, {marginTop:18}]}>Daily Eco-Tips</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, {marginTop:18}]}>Daily Eco-Tips</Text>
+          <Text style={styles.dailyBadge}>Updates Daily</Text>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:16, marginBottom:12}}>
-          <Card style={[styles.tipCard, {marginTop:8}] }>
-            <MaterialCommunityIcons name="leaf" size={36} color="#10b981" style={{position:'absolute', right:12, top:12}} />
-            {/* subtle right-side illustration */}
-            <MaterialCommunityIcons name="leaf" size={56} color="rgba(16,185,129,0.06)" style={{position:'absolute', right:12, bottom:12}} />
-            <View style={styles.tipBadge}><Text style={styles.tipBadgeText}>DID YOU KNOW?</Text></View>
-            <Text style={styles.tipText}>Recycling one aluminum can saves enough energy to run a TV for 3 hours.</Text>
-          </Card>
+          <LinearGradient colors={['#10b981', '#059669']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginTop:8}]}>
+            <MaterialCommunityIcons name="recycle" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
+            <View style={styles.tipBadge}><Text style={styles.tipBadgeText}>💡 DID YOU KNOW?</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>Recycling 1 ton of paper saves 17 trees and 7,000 gallons of water!</Text>
+            <View style={styles.tipFooter}>
+              <Text style={styles.tipFooterText}>Impact: High</Text>
+            </View>
+          </LinearGradient>
 
-          <Card style={[styles.tipCard, {marginLeft: 12, marginTop:8, backgroundColor: '#1f2937'}]}>
-            <MaterialCommunityIcons name="lightbulb-on-outline" size={36} color="#fff" style={{position:'absolute', right:12, top:12}} />
-            {/* subtle right-side illustration */}
-            <MaterialCommunityIcons name="leaf" size={56} color="rgba(255,255,255,0.04)" style={{position:'absolute', right:12, bottom:12}} />
-            <View style={[styles.tipBadge, {backgroundColor: '#111827'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>TIP OF THE DAY</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>Switch to reusable bags to reduce plastic waste.</Text>
-          </Card>
+          <LinearGradient colors={['#3b82f6', '#2563eb']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
+            <MaterialCommunityIcons name="water" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
+            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>🌊 WATER FACT</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>Recycling plastic saves 50L of water per kg. Every drop counts!</Text>
+          </LinearGradient>
+
+          <LinearGradient colors={['#f59e0b', '#d97706']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
+            <MaterialCommunityIcons name="lightning-bolt" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
+            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>⚡ ENERGY TIP</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>Recycling aluminum uses 95% less energy than making new cans from raw materials.</Text>
+            <View style={styles.tipFooter}>
+              <Text style={styles.tipFooterText}>Save Energy!</Text>
+            </View>
+          </LinearGradient>
+
+          <LinearGradient colors={['#8b5cf6', '#7c3aed']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
+            <MaterialCommunityIcons name="earth" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
+            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>🌍 PLANET FACT</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>E-waste contains precious metals like gold and silver. Recycling recovers them!</Text>
+          </LinearGradient>
         </ScrollView>
 
         {/* Recent Activity */}
         <View style={styles.recentHeaderRow}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <Text style={styles.viewAll}>View All</Text>
+          <TouchableOpacity onPress={() => (navigation as any).navigate('Requests')}>
+            <Text style={styles.viewAll}>View All</Text>
+          </TouchableOpacity>
         </View>
 
         {recent.length > 0 ? recent.map(item => {
@@ -285,8 +323,9 @@ const styles = StyleSheet.create({
   viewDetails: { backgroundColor: '#fff', paddingVertical: 12, paddingHorizontal: 22, borderRadius: 999, alignSelf: 'center', marginTop: 16, width: '70%', alignItems: 'center' },
   viewDetailsText: { color: '#065f46', fontWeight: '800', textAlign: 'center' },
 
-  sectionHeaderRow: { marginTop: 4 },
+  sectionHeaderRow: { marginTop: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  dailyBadge: { fontSize: 11, fontWeight: '700', color: '#10b981', backgroundColor: '#ecfdf5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginTop: 18 },
 
   quickRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   quickCard: { backgroundColor: '#fff', borderRadius: 14, padding: 14, width: '48%', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
@@ -298,12 +337,16 @@ const styles = StyleSheet.create({
   pillTitle: { fontWeight: '700', color: '#111827' },
   pillSubtitle: { fontSize: 12, color: '#6b7280' },
 
-  tipCard: { width: 320, height: 160, borderRadius: 14, padding: 16, justifyContent: 'flex-end' },
-  tipBadge: { backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 8 },
-  tipBadgeText: { fontSize: 11, color: '#10b981', fontWeight: '800' },
-  tipText: { color: '#111827', fontSize: 18, fontWeight: '800' },
+  tipCard: { width: 320, height: 180, borderRadius: 16, padding: 18, justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  tipBadge: { backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, alignSelf: 'flex-start' },
+  tipBadgeText: { fontSize: 10, color: '#10b981', fontWeight: '800', letterSpacing: 0.5 },
+  tipText: { color: '#fff', fontSize: 16, fontWeight: '800', lineHeight: 24, marginTop: 8 },
+  tipFooter: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginTop: 8 },
+  tipFooterText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
   recentHeaderRow: { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  viewAll: { color: '#10b981', fontWeight: '700' },
+
   viewAll: { color: '#10b981', fontWeight: '700' },
 
   activityItem: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },

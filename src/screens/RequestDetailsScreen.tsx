@@ -227,12 +227,12 @@ const RequestDetailsScreen: React.FC = ({ route }: any) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f7f7f7' },
-  container: { padding: 20 },
-  back: { width: 36, height:36, borderRadius:18, alignItems:'center', justifyContent:'center', backgroundColor:'#fff' },
-  headerRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:12 },
-  headerTitle: { fontSize:18, fontWeight:'800' },
+  container: { paddingHorizontal: 20, paddingTop: 20 },
+  back: { width: 36, height:36, borderRadius:18, alignItems:'center', justifyContent:'center', backgroundColor:'#fff', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
+  headerRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:16 },
+  headerTitle: { fontSize:20, fontWeight:'800', color: '#111827' },
   title: { fontSize: 20, fontWeight: '800', marginBottom: 12 },
-  card: { backgroundColor:'#fff', borderRadius:12, padding:12 },
+  card: { backgroundColor:'#fff', borderRadius:14, padding:16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   row: { flexDirection:'row', justifyContent:'space-between', paddingVertical:10 },
   left: { color:'#6b7280' },
   section: { fontWeight:'800', marginTop:16, marginBottom:8 },

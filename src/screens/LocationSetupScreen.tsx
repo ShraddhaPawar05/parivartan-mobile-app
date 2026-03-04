@@ -128,24 +128,25 @@ const LocationSetupScreen: React.FC<LocationSetupScreenProps> = ({ onLocationSav
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingTop: 36 },
-  title: { fontSize: 20, fontWeight: '800', marginBottom: 6, textAlign: 'center' },
-  subtitle: { color: '#6b7280', marginBottom: 18, textAlign: 'center' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
-  label: { color: '#374151', marginTop: 12, marginBottom: 6, fontWeight: '700' },
+  container: { paddingHorizontal: 20, paddingTop: 20 },
+  title: { fontSize: 20, fontWeight: '800', marginBottom: 8, textAlign: 'center', color: '#111827' },
+  subtitle: { color: '#6b7280', marginBottom: 24, textAlign: 'center', fontSize: 14 },
+  card: { backgroundColor: '#fff', borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  label: { color: '#374151', marginTop: 12, marginBottom: 8, fontWeight: '700', fontSize: 14 },
   input: { 
-    backgroundColor: '#fafafc', 
+    backgroundColor: '#fff', 
     color: '#111827',
-    padding: 12, 
-    borderRadius: 10,
-    borderWidth: 1,
+    padding: 14, 
+    borderRadius: 12,
+    fontSize: 15,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB'
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  primary: { marginTop: 18, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 999, alignItems: 'center' },
-  primaryText: { color: '#fff', fontWeight: '800' },
+  primary: { marginTop: 24, backgroundColor: '#10b981', paddingVertical: 16, borderRadius: 14, alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 },
+  primaryText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   twoInline: { flexDirection: 'row', justifyContent: 'space-between' },
-  logoCircle: { width: 72, height: 72, borderRadius: 18, backgroundColor: '#f3fef6', alignItems: 'center', justifyContent: 'center' },
+  logoCircle: { width: 80, height: 80, borderRadius: 20, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
 });
 
 export default LocationSetupScreen;

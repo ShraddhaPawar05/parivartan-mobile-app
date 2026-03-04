@@ -7,6 +7,7 @@ import ScreenWrapper from '../components/ScreenWrapper';
 import { useUploadFlow } from '../context/UploadFlowContext';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getWasteIcon, getWasteColor } from '../constants/wasteIcons';
 
 const EnterQuantityScreen: React.FC = () => {
   const navigation: any = useNavigation();
@@ -61,6 +62,7 @@ const EnterQuantityScreen: React.FC = () => {
   }
 
   const wasteTypeDisplay = `${category.charAt(0).toUpperCase() + category.slice(1)} Waste`;
+  const wasteColors = getWasteColor(category);
 
   return (
     <ScreenWrapper>
@@ -76,7 +78,7 @@ const EnterQuantityScreen: React.FC = () => {
               {imageUrl ? (
                 <Image source={{ uri: imageUrl }} style={styles.thumbImage} />
               ) : (
-                <MaterialCommunityIcons name="camera" size={24} color="#10b981" />
+                <MaterialCommunityIcons name={getWasteIcon(category) as any} size={28} color={wasteColors.icon} />
               )}
             </TouchableOpacity>
             <View style={{marginLeft: 12, flex: 1}}>
@@ -86,9 +88,9 @@ const EnterQuantityScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={{alignItems:'center'}}>
-          <Text style={{fontWeight:'800', fontSize:16}}>Number of items</Text>
-          <Text style={{color:'#6b7280', marginTop:6}}>Approximate count is fine. No need to be exact.</Text>
+        <View style={{alignItems:'center', marginTop: 24}}>
+          <Text style={{fontWeight:'800', fontSize:18, color: '#111827'}}>Number of items</Text>
+          <Text style={{color:'#6b7280', marginTop:8, fontSize: 14, textAlign: 'center'}}>Approximate count is fine. No need to be exact.</Text>
         </View>
 
         <View style={styles.counterRow}>
@@ -97,7 +99,7 @@ const EnterQuantityScreen: React.FC = () => {
           <TouchableOpacity style={[styles.circle, {backgroundColor:'#10b981'}]} onPress={() => setQuantity(quantity + 1)}><Text style={{fontSize:24,color:'#fff'}}>+</Text></TouchableOpacity>
         </View>
 
-        <Text style={styles.note}>Approximate count is fine. No need to be exact.</Text>
+        <Text style={styles.note}>💡 Don't worry about exact numbers</Text>
 
         <TouchableOpacity style={styles.next} onPress={() => { setFlowQuantity(quantity, 'items'); navigation.navigate('PickupAddress'); }}>
           <Text style={styles.nextText}>Continue</Text>
@@ -109,37 +111,37 @@ const EnterQuantityScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f7f7f7' },
-  container: { padding: 20 },
-  back: { width: 36, height:36, borderRadius:18, alignItems:'center', justifyContent:'center', backgroundColor:'#fff', marginBottom:12 },
-  title: { textAlign: 'center', fontSize: 20, fontWeight: '800', marginBottom: 18 },
-  itemCard: { backgroundColor:'#fff', borderRadius:12, padding:12 },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
+  back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
+  title: { textAlign: 'center', fontSize: 20, fontWeight: '800', marginBottom: 20, color: '#111827' },
+  itemCard: { backgroundColor:'#fff', borderRadius:14, padding:16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   itemLeft: { flexDirection:'row', alignItems:'center' },
   thumb: { 
-    width:64, 
-    height:64, 
-    borderRadius:12, 
-    backgroundColor:'#f3f4f6',
+    width:72, 
+    height:72, 
+    borderRadius:14, 
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    backgroundColor: '#f3f4f6'
   },
   thumbImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 12
+    borderRadius: 14
   },
-  itemTitle: { fontWeight:'700' },
-  itemSub: { color:'#10b981', fontWeight:'600', marginTop:6, fontSize: 11 },
+  itemTitle: { fontWeight:'800', fontSize: 16, color: '#111827' },
+  itemSub: { color:'#10b981', fontWeight:'700', marginTop:6, fontSize: 11 },
   edit: { marginLeft:'auto' },
   toggles: { flexDirection:'row', backgroundColor:'#fff', padding:6, borderRadius:999, marginTop:30, alignSelf:'center' },
   unit: { paddingHorizontal:18, paddingVertical:8, borderRadius:999, marginHorizontal:4 },
   unitActive: { backgroundColor:'#10b981' },
-  counterRow: { flexDirection:'row', alignItems:'center', justifyContent:'center', marginTop:30 },
-  circle: { width:72, height:72, borderRadius:36, backgroundColor:'#fff', alignItems:'center', justifyContent:'center', shadowColor:'#000', shadowOpacity:0.04, shadowRadius:8, elevation:3 },
-  qty: { fontSize:56, fontWeight:'800', marginHorizontal:30 },
-  note: { textAlign:'center', color:'#6b7280', marginTop:20 },
-  next: { backgroundColor:'#10b981', borderRadius:999, paddingVertical:16, alignItems:'center', marginTop:30 },
-  nextText: { color:'#fff', fontWeight:'800' },
+  counterRow: { flexDirection:'row', alignItems:'center', justifyContent:'center', marginTop:40 },
+  circle: { width:80, height:80, borderRadius:40, backgroundColor:'#fff', alignItems:'center', justifyContent:'center', shadowColor:'#000', shadowOpacity:0.06, shadowRadius:10, elevation:4 },
+  qty: { fontSize:64, fontWeight:'900', marginHorizontal:40, color: '#111827' },
+  note: { textAlign:'center', color:'#6b7280', marginTop:24, fontSize: 14 },
+  next: { backgroundColor:'#10b981', borderRadius:14, paddingVertical:16, alignItems:'center', marginTop:40, shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 },
+  nextText: { color:'#fff', fontWeight:'800', fontSize: 16 },
 });
 
 export default EnterQuantityScreen;

@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, getDoc, getDocs, increment, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { getWasteIcon } from '../constants/wasteIcons';
 import { STATUS_FLOW } from '../constants/statusFlow';
 import { debugFirestoreData } from '../utils/debugFirestore';
+import { sendLocalPushNotification } from '../services/pushNotificationService';
 
 interface Request {
   id: string;
@@ -94,12 +95,47 @@ const PartnerDashboardScreen: React.FC = () => {
     }
 
     try {
+      // Get request data
+      const requestDoc = await getDoc(doc(db, 'wasteRequests', requestId));
+      const requestData = requestDoc.data();
+      const userId = requestData?.userId;
+      const wasteType = requestData?.type;
+
+      // Update status
       await updateDoc(doc(db, 'wasteRequests', requestId), {
         status: newStatus,
         updatedAt: serverTimestamp()
       });
+
+      // Create notification
+      let message = '';
+      if (newStatus === 'Accepted') {
+        message = `Your ${wasteType} waste request has been accepted by the recycler.`;
+      } else if (newStatus === 'In Progress') {
+        message = `Pickup has been scheduled for your ${wasteType} waste.`;
+      }
+
+      if (userId && message) {
+        await addDoc(collection(db, 'notifications'), {
+          userId,
+          type: 'status_update',
+          message,
+          read: false,
+          requestId,
+          wasteRequestId: requestId,
+          createdAt: serverTimestamp()
+        });
+
+        // Send local notification
+        await sendLocalPushNotification(
+          newStatus === 'Accepted' ? '✅ Request Accepted' : '🚚 Pickup Scheduled',
+          message
+        );
+      }
+
       Alert.alert('Success', `Status updated to ${newStatus}`);
     } catch (error) {
+      console.error('Error updating status:', error);
       Alert.alert('Error', 'Failed to update status');
     }
   };
@@ -112,15 +148,80 @@ const PartnerDashboardScreen: React.FC = () => {
 
     try {
       console.log('🔵 Completing request:', requestId);
-      
+
+      // 1️⃣ Fetch wasteRequest document
+      const requestDoc = await getDoc(doc(db, 'wasteRequests', requestId));
+      if (!requestDoc.exists()) {
+        Alert.alert('Error', 'Request not found');
+        return;
+      }
+
+      // 2️⃣ Extract data
+      const requestData = requestDoc.data();
+      const wasteType = requestData.type;
+      const quantity = requestData.quantity || 0;
+      const userId = requestData.userId;
+
+      console.log('📦 Waste Type:', wasteType);
+      console.log('📦 Quantity:', quantity, 'kg');
+      console.log('📦 User ID:', userId);
+
+      // 3️⃣ Query rewardRules collection
+      const rulesQuery = query(
+        collection(db, 'rewardRules'),
+        where('wasteType', '==', wasteType),
+        where('isActive', '==', true)
+      );
+      const rulesSnapshot = await getDocs(rulesQuery);
+
+      if (rulesSnapshot.empty) {
+        console.log('⚠️ No reward rule found for:', wasteType);
+        Alert.alert('Error', `No reward rule found for ${wasteType}`);
+        return;
+      }
+
+      // 4️⃣ Calculate ecoPointsAwarded
+      const rule = rulesSnapshot.docs[0].data();
+      const pointsPerKg = rule.pointsPerKg || 0;
+      const ecoPointsAwarded = Math.round(quantity * pointsPerKg);
+
+      console.log('✅ Matched Rule:', rule.wasteType, '=', pointsPerKg, 'points/kg');
+      console.log('✅ Calculation:', quantity, '×', pointsPerKg, '=', ecoPointsAwarded, 'points');
+
+      // 5️⃣ Update wasteRequests document
       await updateDoc(doc(db, 'wasteRequests', requestId), {
         status: 'Completed',
+        ecoPointsAwarded: ecoPointsAwarded,
         updatedAt: serverTimestamp()
       });
-      
-      console.log('✅ Status updated to Completed');
-      console.log('✅ Cloud Function will calculate and award EcoPoints automatically');
-      Alert.alert('Success', 'Request completed! EcoPoints will be calculated automatically.');
+      console.log('✅ wasteRequests updated: status=Completed, ecoPointsAwarded=', ecoPointsAwarded);
+
+      // 6️⃣ Update user stats
+      await updateDoc(doc(db, 'users', userId), {
+        ecoPoints: increment(ecoPointsAwarded),
+        completedRequests: increment(1),
+        totalWasteRecycled: increment(quantity)
+      });
+      console.log('✅ User stats updated: +', ecoPointsAwarded, 'points, +', quantity, 'kg');
+
+      // 7️⃣ Create notification
+      await addDoc(collection(db, 'notifications'), {
+        userId,
+        type: 'request_completed',
+        message: `Your ${wasteType} waste request has been completed! You earned ${ecoPointsAwarded} EcoPoints.`,
+        read: false,
+        requestId,
+        wasteRequestId: requestId,
+        createdAt: serverTimestamp()
+      });
+
+      // 8️⃣ Send local notification
+      await sendLocalPushNotification(
+        '🎉 Pickup Completed',
+        `Your ${wasteType} waste has been collected. +${ecoPointsAwarded} EcoPoints!`
+      );
+
+      Alert.alert('Success', `Request completed! ${ecoPointsAwarded} EcoPoints awarded.`);
     } catch (error) {
       console.error('❌ Error completing request:', error);
       Alert.alert('Error', 'Failed to complete request');

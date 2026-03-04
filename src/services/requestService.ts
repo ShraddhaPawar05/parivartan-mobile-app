@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, onSnapshot, getDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { creditEcoPoints } from './rewardsService';
 import { uploadImageToCloudinary } from './cloudinaryService';
@@ -182,6 +182,16 @@ export const createRequest = async (
     const docRef = await addDoc(collection(db, 'wasteRequests'), requestData);
     console.log('✅ Request created with ID:', docRef.id);
     console.log('✅ Status:', requestData.status, '| PartnerId:', partnerId || 'none');
+    
+    // Increment user's totalRequests counter
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        totalRequests: increment(1)
+      });
+      console.log('✅ User totalRequests incremented');
+    } catch (statsError) {
+      console.warn('⚠️ Failed to update user stats:', statsError);
+    }
     
     // Create notification for partner if assigned
     if (partnerId) {

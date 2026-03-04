@@ -1,57 +1,41 @@
 {
   "expo": {
     "name": "Parivartan",
-    "slug": "Parivartan",
+    "slug": "parivartan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "parivartan",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "extra": {
-      "eas": {
-        "projectId": "your-expo-project-id-here"
-      }
+
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
+
     "android": {
+      "package": "com.anonymous.Parivartan",
+      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ],
-      "package": "com.anonymous.Parivartan",
-      "googleServicesFile": "./google-services.json"
+      ]
     },
+
     "ios": {
-      "supportsTablet": true,
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "supportsTablet": true
     },
+
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
+
     "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
       [
         "expo-camera",
         {
@@ -62,18 +46,10 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#10b981",
-          "sounds": ["./assets/sounds/notification.wav"],
-          "androidMode": "default",
-          "androidCollapsedTitle": "#{unread_notifications} new notifications"
+          "color": "#10b981"
         }
-      ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/messaging"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      ]
+      
+    ]
   }
 }

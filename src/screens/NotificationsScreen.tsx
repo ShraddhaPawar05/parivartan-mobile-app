@@ -1,9 +1,9 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,6 +13,8 @@ type Notification = {
   message: string;
   createdAt: any;
   status: string;
+  requestId?: string;
+  wasteRequestId?: string;
 };
 
 const NotificationsScreen: React.FC = () => {
@@ -48,6 +50,16 @@ const NotificationsScreen: React.FC = () => {
       
       setNotifications(notifList);
       setLoading(false);
+
+      // Mark all unread notifications as read
+      const unreadDocs = snapshot.docs.filter(doc => doc.data().read === false);
+      if (unreadDocs.length > 0) {
+        const batch = writeBatch(db);
+        unreadDocs.forEach(docSnap => {
+          batch.update(docSnap.ref, { read: true });
+        });
+        batch.commit().catch(err => console.error('Error marking notifications as read:', err));
+      }
     }, (error) => {
       console.error('Error fetching notifications:', error);
       setLoading(false);
@@ -56,20 +68,55 @@ const NotificationsScreen: React.FC = () => {
     return () => unsubscribe();
   }, [user?.uid]);
 
+  const getNotificationIcon = (message: string, type: string, status?: string) => {
+    const lowerMessage = message.toLowerCase();
+    
+    // Check message content for keywords
+    if (lowerMessage.includes('accepted')) {
+      return { name: 'check-circle', color: '#10b981', bg: '#ecfdf5' };
+    }
+    if (lowerMessage.includes('scheduled') || lowerMessage.includes('pickup has been scheduled')) {
+      return { name: 'clock-outline', color: '#3b82f6', bg: '#eff6ff' };
+    }
+    if (lowerMessage.includes('completed')) {
+      return { name: 'check-all', color: '#8b5cf6', bg: '#f5f3ff' };
+    }
+    if (lowerMessage.includes('available') || type === 'availability_confirmation') {
+      return { name: 'calendar-clock', color: '#f59e0b', bg: '#fef3c7' };
+    }
+    
+    return { name: 'bell', color: '#6b7280', bg: '#f3f4f6' };
+  };
+
   const renderNotification = ({ item }: { item: Notification }) => {
     const timestamp = item.createdAt?.toDate?.() ? item.createdAt.toDate().toLocaleString() : 'Just now';
     
+    // Debug log
+    console.log('Notification:', { type: item.type, status: item.status, message: item.message });
+    
+    const iconData = getNotificationIcon(item.message, item.type, item.status);
+    
+    const handleNotificationPress = () => {
+      const reqId = item.requestId || item.wasteRequestId;
+      if (reqId) {
+        (navigation as any).navigate('RequestDetails', { requestId: reqId });
+      } else {
+        // If no requestId, navigate to Requests tab
+        (navigation as any).navigate('Requests');
+      }
+    };
+    
     return (
-      <View style={styles.notificationCard}>
-        <View style={styles.iconCircle}>
-          <Feather name="check-circle" size={20} color="#10b981" />
+      <TouchableOpacity style={styles.notificationCard} onPress={handleNotificationPress} activeOpacity={0.7}>
+        <View style={[styles.iconCircle, {backgroundColor: iconData.bg}]}>
+          <MaterialCommunityIcons name={iconData.name as any} size={22} color={iconData.color} />
         </View>
         <View style={styles.notificationContent}>
           <Text style={styles.notificationTitle}>{item.type.replace('_', ' ').toUpperCase()}</Text>
           <Text style={styles.notificationMessage}>{item.message}</Text>
           <Text style={styles.notificationTime}>{timestamp}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -117,24 +164,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: '#111827',
   },
   placeholder: {
-    width: 40,
+    width: 36,
   },
   list: {
     padding: 16,
@@ -154,9 +205,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#ecfdf5',
     alignItems: 'center',
     justifyContent: 'center',

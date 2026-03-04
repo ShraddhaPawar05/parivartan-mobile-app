@@ -98,12 +98,13 @@ const RewardsScreen: React.FC = () => {
     }
 
     Alert.alert(
-      'Confirm Redemption',
-      `Redeem "${item.title}" for ${item.pointsRequired} EcoPoints?`,
+      '🎁 Redeem Voucher',
+      `Are you sure you want to redeem "${item.title}" for ${item.pointsRequired} EcoPoints?\n\nYour balance will be: ${points - item.pointsRequired} EcoPoints`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Redeem',
+          text: 'Yes, Redeem',
+          style: 'default',
           onPress: async () => {
             try {
               console.log('🔵 Redeeming voucher:', item.title);
@@ -120,7 +121,7 @@ const RewardsScreen: React.FC = () => {
                 userId: user!.uid,
                 voucherId: item.id,
                 voucherTitle: item.title,
-                points: item.pointsRequired,
+                pointsSpent: item.pointsRequired,
                 type: 'redeemed',
                 createdAt: serverTimestamp()
               });
@@ -128,7 +129,7 @@ const RewardsScreen: React.FC = () => {
 
               setConfetti(true);
               setTimeout(() => setConfetti(false), 3000);
-              Alert.alert('Success!', `You've redeemed "${item.title}"!`);
+              Alert.alert('🎉 Success!', `You've redeemed "${item.title}"!\n\nCheck your email for voucher details.`);
               loadRewardsData();
             } catch (error) {
               console.error('❌ Error redeeming voucher:', error);
@@ -233,11 +234,17 @@ const RewardsScreen: React.FC = () => {
 
         {rewardHistory && rewardHistory.length > 0 && (
           <View style={{marginTop: 18}}>
-            <Text style={{fontWeight:'800'}}>Reward History</Text>
+            <Text style={{fontWeight:'800'}}>Redemption History</Text>
             {rewardHistory.slice(0,5).map(r => (
-              <View key={r.id} style={{backgroundColor:'#fff', padding:12, borderRadius:10, marginTop:12}}>
-                <Text style={{fontWeight:'800'}}>+{r.points} EcoPoints Earned</Text>
-                <Text style={{color:'#6b7280', marginTop:6}}>Earned on {new Date(r.createdAt?.toDate?.() || r.createdAt).toLocaleDateString()}</Text>
+              <View key={r.id} style={{backgroundColor:'#fff', padding:14, borderRadius:10, marginTop:12, flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
+                <View style={{flex:1}}>
+                  <View style={{flexDirection:'row', alignItems:'center'}}>
+                    <MaterialCommunityIcons name="gift" size={20} color="#10b981" />
+                    <Text style={{fontWeight:'800', marginLeft:8}}>{r.voucherTitle}</Text>
+                  </View>
+                  <Text style={{color:'#6b7280', marginTop:6, fontSize:12}}>{new Date(r.createdAt?.toDate?.() || r.createdAt).toLocaleDateString()}</Text>
+                </View>
+                <Text style={{fontWeight:'800', color:'#ef4444'}}>-{r.pointsSpent} pts</Text>
               </View>
             ))}
           </View>
