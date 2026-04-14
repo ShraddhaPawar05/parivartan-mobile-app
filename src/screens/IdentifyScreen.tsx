@@ -10,12 +10,12 @@ import { useUploadFlow } from '../context/UploadFlowContext';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const categories = ['Plastic', 'Paper', 'Metal', 'Clothes', 'E-waste', 'Organic'];
+const categories = ['Plastic', 'Paper', 'Metal', 'Clothes', 'Cardboard', 'Glass'];
 
 const IdentifyScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const route: any = useRoute();
-  const { setCategory, setImageUrl } = useUploadFlow();
+  const { setCategory, setImageUrl, resetFlow } = useUploadFlow();
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
 
@@ -92,7 +92,10 @@ const IdentifyScreen: React.FC = () => {
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
+          <BackButton onPress={() => {
+            resetFlow();
+            navigation.getParent()?.navigate('Home');
+          }} style={styles.backButton} />
           <Text style={styles.title}>Identify Waste</Text>
           <View style={styles.headerRight} />
         </View>
@@ -136,8 +139,8 @@ const IdentifyScreen: React.FC = () => {
               Paper: 'newspaper-variant',
               Metal: 'cog',
               Clothes: 'tshirt-crew',
-              'E-waste': 'cellphone',
-              Organic: 'food-apple'
+              Cardboard: 'package-variant',
+              Glass: 'glass-fragile'
             };
             const icon = iconMap[c as keyof typeof iconMap] || 'recycle';
             const colors = {
@@ -145,8 +148,8 @@ const IdentifyScreen: React.FC = () => {
               Paper: { bg: '#fef9f3', icon: '#f97316' },
               Metal: { bg: '#f5f3ff', icon: '#8b5cf6' },
               Clothes: { bg: '#fdf4ff', icon: '#d946ef' },
-              'E-waste': { bg: '#fef3f2', icon: '#ef4444' },
-              Organic: { bg: '#f0fdf4', icon: '#10b981' }
+              Cardboard: { bg: '#fef3c7', icon: '#d97706' },
+              Glass: { bg: '#ecfeff', icon: '#06b6d4' }
             }[c] || { bg: '#f9fafb', icon: '#6b7280' };
 
             return (

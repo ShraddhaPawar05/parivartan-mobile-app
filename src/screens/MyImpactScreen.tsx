@@ -1,323 +1,268 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import ScreenWrapper from '../components/ScreenWrapper';
-import Card from '../components/ui/Card';
-import { useRequests } from '../context';
 import { useAuth } from '../context/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
+
+interface RecentActivity {
+  id: string;
+  type: string;
+  status: string;
+  ecoPointsAwarded?: number;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+const MILESTONES = [100, 250, 500, 1000, 2500, 5000, 10000];
+
+const timeAgo = (date: Date): string => {
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return date.toLocaleDateString();
+};
 
 const MyImpactScreen: React.FC = () => {
   const navigation: any = useNavigation();
-  const { requests } = useRequests();
   const { user } = useAuth();
-  const [ecoPoints, setEcoPoints] = React.useState<number>(0);
-  const [totalRequests, setTotalRequests] = React.useState<number>(0);
-  const [completedRequests, setCompletedRequests] = React.useState<number>(0);
-  const [totalWasteRecycled, setTotalWasteRecycled] = React.useState<number>(0);
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
+  const [ecoPoints, setEcoPoints] = useState(0);
+  const [allRequests, setAllRequests] = useState<RecentActivity[]>([]);
 
-  React.useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 8, useNativeDriver: true })
-    ]).start();
-  }, []);
+  // Derive from full list — single source of truth
+  const completedRequests = allRequests.filter(r => r.status === 'Completed').length;
+  const recentActivity = allRequests.slice(0, 3);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user?.uid) return;
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setEcoPoints(data.ecoPoints ?? 0);
-        setTotalRequests(data.totalRequests ?? 0);
-        setCompletedRequests(data.completedRequests ?? 0);
-        setTotalWasteRecycled(data.totalWasteRecycled ?? 0);
+    const unsub = onSnapshot(doc(db, 'users', user.uid), snap => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setEcoPoints(d.ecoPoints ?? 0);
       }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, [user?.uid]);
 
-  const totalKg = totalWasteRecycled;
-  const totalPickups = completedRequests;
-  
-  // Logical environmental calculations
-  const co2Saved = Math.round(totalKg * 2.5 * 10) / 10; // 2.5kg CO2 per kg waste
-  const treesEquivalent = Math.floor(co2Saved / 21); // 1 tree absorbs ~21kg CO2/year
-  const waterSaved = Math.round(totalKg * 50); // 50L water per kg waste
-  const energySaved = Math.round(totalKg * 1.8); // 1.8 kWh per kg
-  const landfillSaved = totalKg; // Direct kg saved from landfill
+  // Fetch ALL user requests, sort in JS, take top 3 — no composite index needed
+  useEffect(() => {
+    if (!user?.uid) return;
+    const q = query(
+      collection(db, 'wasteRequests'),
+      where('userId', '==', user.uid)
+    );
+    const unsub = onSnapshot(q, snap => {
+      const sorted = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as RecentActivity))
+        .sort((a, b) => {
+          const aT = a.createdAt?.toDate?.() || new Date(a.createdAt);
+          const bT = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          return bT.getTime() - aT.getTime();
+        });
+      setAllRequests(sorted); // store ALL, not just 3
+    });
+    return () => unsub();
+  }, [user?.uid]);
 
-  const breakdown = ['plastic', 'cloth', 'e-waste', 'metal']
-    .map(cat => ({
-      name: cat === 'e-waste' ? 'E-waste' : cat.charAt(0).toUpperCase() + cat.slice(1),
-      qty: requests.filter(r => r.status === 'Completed' && r.type?.toLowerCase() === cat).reduce((s, r) => s + (r.quantity || 0), 0),
-    }))
-    .filter(b => b.qty > 0);
+  const hasPoints = ecoPoints > 0;
+  const hasActivity = recentActivity.length > 0;
+  // Progress = ecoPoints / nextMilestone (always from 0, not from prevMilestone)
+  const nextMilestone = MILESTONES.find(m => m > ecoPoints) ?? MILESTONES[MILESTONES.length - 1];
+  const progress = Math.min(ecoPoints / nextMilestone, 1);
+  const ptsToUnlock = Math.max(nextMilestone - ecoPoints, 0);
+  const progressPct = Math.round(progress * 100);
 
-  // Milestones based on EcoPoints
-  const milestones = [100, 250, 500, 1000, 2500, 5000, 10000];
-  const nextMilestone = milestones.find(m => m > ecoPoints) || milestones[milestones.length - 1];
-  const prevMilestone = milestones.filter(m => m <= ecoPoints).pop() || 0;
-  const progressToNextMilestone = ((ecoPoints - prevMilestone) / (nextMilestone - prevMilestone)) * 100;
-
-  // Dynamic motivational quotes based on impact
-  const getQuote = () => {
-    if (totalKg === 0) return { text: "Start your journey to a greener tomorrow", emoji: "🌱" };
-    if (totalKg < 5) return { text: "Small steps lead to big changes", emoji: "🌿" };
-    if (totalKg < 20) return { text: "You're building momentum for the planet", emoji: "🌍" };
-    if (totalKg < 50) return { text: "Your impact is growing stronger every day", emoji: "💚" };
-    if (totalKg < 100) return { text: "You're a sustainability champion", emoji: "🏆" };
-    return { text: "Incredible! You're transforming the future", emoji: "⭐" };
+  const getActivityLabel = (item: RecentActivity): { icon: string; color: string; text: string } => {
+    if (item.status === 'Completed') return {
+      icon: 'check-circle',
+      color: '#10b981',
+      text: `Pickup completed${item.ecoPointsAwarded ? ` · +${item.ecoPointsAwarded} pts` : ''}`,
+    };
+    if (item.status === 'In Progress') return { icon: 'truck-delivery', color: '#3b82f6', text: 'Pickup in progress' };
+    if (item.status === 'Accepted') return { icon: 'check', color: '#8b5cf6', text: 'Request accepted' };
+    return { icon: 'clock-outline', color: '#f59e0b', text: 'Request submitted' };
   };
-
-  const quote = getQuote();
-
-  // Achievement badges
-  const badges = [
-    { unlocked: totalPickups >= 1, icon: 'leaf', label: 'First Step', color: '#10b981' },
-    { unlocked: totalKg >= 10, icon: 'tree', label: '10kg Hero', color: '#059669' },
-    { unlocked: totalPickups >= 5, icon: 'recycle', label: 'Eco Warrior', color: '#0d9488' },
-    { unlocked: totalKg >= 50, icon: 'earth', label: 'Planet Saver', color: '#0891b2' },
-  ].filter(b => b.unlocked);
 
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <MaterialCommunityIcons name="chevron-left" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.title}>My Impact</Text>
-          <View style={{width:36}} />
+          <View style={{ width: 36 }} />
         </View>
 
-        <Animated.View style={{opacity: fadeAnim, transform: [{scale: scaleAnim}]}}>
-          {/* Motivational Quote */}
-          <Card style={styles.quoteCard}>
-            <Text style={styles.quoteEmoji}>{quote.emoji}</Text>
-            <Text style={styles.quoteText}>{quote.text}</Text>
-          </Card>
+        {/* Hero */}
+        <LinearGradient colors={['#10b981', '#059669']} start={[0, 0]} end={[1, 1]} style={styles.heroCard}>
+          <MaterialCommunityIcons name="leaf" size={80} color="rgba(255,255,255,0.08)" style={styles.heroBg} />
+          {hasPoints ? (
+            <>
+              <Text style={styles.heroEmoji}>♻️</Text>
+              <Text style={styles.heroTitle}>You've earned {ecoPoints.toLocaleString()} EcoPoints</Text>
+              <Text style={styles.heroSub}>Keep going and increase your impact 🚀</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.heroEmoji}>🌱</Text>
+              <Text style={styles.heroTitle}>Start your first recycling action</Text>
+              <Text style={styles.heroSub}>Schedule a pickup to begin your impact journey</Text>
+            </>
+          )}
+        </LinearGradient>
 
-          {/* Hero Stats */}
-          <View style={styles.heroSection}>
-            <View style={styles.mainStatCard}>
-              <View style={styles.liveIndicatorTop}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
-              <MaterialCommunityIcons name="delete-variant" size={36} color="#10b981" />
-              <Text style={styles.mainStatValue}>{totalKg.toFixed(1)}</Text>
-              <Text style={styles.mainStatLabel}>kg Recycled</Text>
-              <Text style={styles.mainStatSub}>{totalPickups} pickups</Text>
+        {/* 2 Metric Cards */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <View style={[styles.metricIconWrap, { backgroundColor: '#ecfdf5' }]}>
+              <MaterialCommunityIcons name="recycle" size={22} color="#10b981" />
             </View>
-            
-            <View style={styles.mainStatCard}>
-              <MaterialCommunityIcons name="star-circle" size={36} color="#f59e0b" />
-              <Text style={styles.mainStatValue}>{ecoPoints.toLocaleString()}</Text>
-              <Text style={styles.mainStatLabel}>EcoPoints</Text>
-              <Text style={styles.mainStatSub}>Keep earning!</Text>
+            <Text style={styles.metricValue}>{completedRequests > 0 ? `${completedRequests}` : '0'}</Text>
+            <Text style={styles.metricLabel}>
+              {completedRequests > 0 ? `pickup${completedRequests > 1 ? 's' : ''} completed` : 'No activity yet'}
+            </Text>
+          </View>
+
+          <View style={styles.metricCard}>
+            <View style={[styles.metricIconWrap, { backgroundColor: '#fffbeb' }]}>
+              <MaterialCommunityIcons name="star-circle" size={22} color="#f59e0b" />
+            </View>
+            <Text style={styles.metricValue}>{ecoPoints.toLocaleString()}</Text>
+            <Text style={styles.metricLabel}>
+              {ecoPoints > 0 ? 'pts earned' : 'No points yet'}
+            </Text>
+            {ecoPoints > 0 && <Text style={styles.metricHelper}>Earned from recycling</Text>}
+          </View>
+        </View>
+
+        {/* Milestone */}
+        <View style={styles.milestoneCard}>
+          <View style={styles.milestoneTop}>
+            <View>
+              <Text style={styles.milestoneTitle}>🎯 Next Reward: {nextMilestone.toLocaleString()} pts</Text>
+              <Text style={styles.milestoneSub}>
+                {ecoPoints > 0
+                  ? `${ecoPoints.toLocaleString()} / ${nextMilestone.toLocaleString()} pts completed`
+                  : `0 / ${nextMilestone.toLocaleString()} pts completed`}
+              </Text>
+            </View>
+            <View style={styles.milestoneCircle}>
+              <Text style={styles.milestoneCircleVal}>{progressPct}%</Text>
             </View>
           </View>
 
-          {/* Achievement Badges */}
-          {badges.length > 0 && (
-            <View style={styles.badgesSection}>
-              <Text style={styles.sectionTitle}>🏅 Achievements</Text>
-              <View style={styles.badgesRow}>
-                {badges.map((badge, i) => (
-                  <View key={i} style={[styles.badge, {backgroundColor: badge.color}]}>
-                    <MaterialCommunityIcons name={badge.icon as any} size={20} color="#fff" />
-                    <Text style={styles.badgeLabel}>{badge.label}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          <View style={styles.progressBg}>
+            <View style={[styles.progressFill, { width: `${progressPct}%` as any }]} />
+          </View>
 
-          {/* Environmental Impact */}
-          {totalKg > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, {marginTop: 24}]}>🌍 Environmental Impact</Text>
-              <View style={styles.impactGrid}>
-                <Card style={styles.impactCard}>
-                  <MaterialCommunityIcons name="cloud-outline" size={32} color="#3b82f6" />
-                  <Text style={styles.impactValue}>{co2Saved}</Text>
-                  <Text style={styles.impactUnit}>kg CO₂</Text>
-                  <Text style={styles.impactLabel}>Emissions Prevented</Text>
-                </Card>
-                <Card style={styles.impactCard}>
-                  <MaterialCommunityIcons name="pine-tree" size={32} color="#10b981" />
-                  <Text style={styles.impactValue}>{treesEquivalent}</Text>
-                  <Text style={styles.impactUnit}>trees</Text>
-                  <Text style={styles.impactLabel}>Annual Equivalent</Text>
-                </Card>
-                <Card style={styles.impactCard}>
-                  <MaterialCommunityIcons name="water" size={32} color="#06b6d4" />
-                  <Text style={styles.impactValue}>{waterSaved}</Text>
-                  <Text style={styles.impactUnit}>liters</Text>
-                  <Text style={styles.impactLabel}>Water Conserved</Text>
-                </Card>
-                <Card style={styles.impactCard}>
-                  <MaterialCommunityIcons name="lightning-bolt" size={32} color="#f59e0b" />
-                  <Text style={styles.impactValue}>{energySaved}</Text>
-                  <Text style={styles.impactUnit}>kWh</Text>
-                  <Text style={styles.impactLabel}>Energy Saved</Text>
-                </Card>
-              </View>
+          <Text style={styles.milestoneUnlock}>
+            {ptsToUnlock > 0
+              ? `${ptsToUnlock.toLocaleString()} pts to unlock`
+              : '🎉 Milestone reached!'}
+          </Text>
+        </View>
 
-              {/* Fun Fact */}
-              <Card style={styles.funFactCard}>
-                <MaterialCommunityIcons name="lightbulb-on" size={24} color="#f59e0b" />
-                <View style={{flex: 1, marginLeft: 12}}>
-                  <Text style={styles.funFactTitle}>Did you know?</Text>
-                  <Text style={styles.funFactText}>
-                    {treesEquivalent > 0 
-                      ? `You've saved the equivalent of ${treesEquivalent} tree${treesEquivalent > 1 ? 's' : ''} working for a year!`
-                      : `Every kg you recycle prevents 2.5kg of CO₂ emissions!`}
-                  </Text>
+        {/* Recent Activity */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🕒 Recent Activity</Text>
+        </View>
+
+        {recentActivity.length === 0 ? (
+          <View style={styles.emptyActivity}>
+            <MaterialCommunityIcons name="history" size={36} color="#d1d5db" />
+            <Text style={styles.emptyActivityText}>No activity yet</Text>
+            <Text style={styles.emptyActivitySub}>Your pickups will appear here</Text>
+          </View>
+        ) : (
+          recentActivity.map(item => {
+            const label = getActivityLabel(item);
+            const date = item.updatedAt?.toDate?.() || item.createdAt?.toDate?.() || new Date();
+            return (
+              <View key={item.id} style={styles.activityItem}>
+                <View style={[styles.activityIconWrap, { backgroundColor: label.color + '18' }]}>
+                  <MaterialCommunityIcons name={label.icon as any} size={20} color={label.color} />
                 </View>
-              </Card>
-            </>
-          )}
-
-          {/* Progress */}
-          {totalKg >= 0 && (
-            <Card style={styles.progressCard}>
-              <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
-                <View style={{flex: 1}}>
-                  <Text style={styles.progressTitle}>🎯 Next Milestone</Text>
-                  <Text style={styles.progressSubtitle}>
-                    {ecoPoints === 0 ? 'Start recycling to unlock' : `${(nextMilestone - ecoPoints).toLocaleString()} points to reach ${nextMilestone.toLocaleString()} points`}
-                  </Text>
-                </View>
-                <View style={styles.milestoneCircle}>
-                  <Text style={styles.milestoneText}>{nextMilestone >= 1000 ? `${(nextMilestone/1000).toFixed(0)}k` : nextMilestone}</Text>
-                  <Text style={styles.milestoneUnit}>pts</Text>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityText}>{label.text}</Text>
+                  <Text style={styles.activityType}>{item.type} Waste · {timeAgo(date)}</Text>
                 </View>
               </View>
-              <View style={styles.progressBarBg}>
-                <View style={[styles.progressBarFill, {width: `${progressToNextMilestone}%`}]} />
-              </View>
-            </Card>
-          )}
+            );
+          })
+        )}
 
-          {/* Breakdown */}
-          {breakdown.length > 0 && (
-            <View style={{marginTop: 24}}>
-              <Text style={styles.sectionTitle}>📊 Waste Breakdown</Text>
-              <View style={{marginTop: 12}}>
-                {breakdown.map(b => {
-                  const config = {
-                    Plastic: { bg: '#dbeafe', color: '#1e40af', icon: 'bottle-soda', fact: 'Takes 450 years to decompose' },
-                    Cloth: { bg: '#fef3c7', color: '#92400e', icon: 'tshirt-crew', fact: 'Saves textile waste' },
-                    Metal: { bg: '#e0e7ff', color: '#3730a3', icon: 'gold', fact: '95% energy saved vs new' },
-                    'E-waste': { bg: '#fce7f3', color: '#831843', icon: 'cpu-64-bit', fact: 'Recovers precious metals' }
-                  }[b.name] || { bg: '#f3f4f6', color: '#374151', icon: 'recycle', fact: 'Great job!' };
-                  const percentage = ((b.qty / totalKg) * 100).toFixed(0);
-                  return (
-                    <Card key={b.name} style={[styles.breakdownCard, {backgroundColor: config.bg}]}>
-                      <View style={{flexDirection:'row', alignItems:'center'}}>
-                        <View style={[styles.breakdownIcon, {backgroundColor: config.color}]}>
-                          <MaterialCommunityIcons name={config.icon as any} size={22} color="#fff" />
-                        </View>
-                        <View style={{flex:1, marginLeft:14}}>
-                          <Text style={[styles.breakdownName, {color: config.color}]}>{b.name}</Text>
-                          <Text style={[styles.breakdownFact, {color: config.color}]}>{config.fact}</Text>
-                          <View style={styles.breakdownBar}>
-                            <View style={[styles.breakdownBarFill, {width: `${percentage}%`, backgroundColor: config.color}]} />
-                          </View>
-                        </View>
-                        <View style={{alignItems:'flex-end', marginLeft: 12}}>
-                          <Text style={[styles.breakdownQty, {color: config.color}]}>{b.qty.toFixed(1)}</Text>
-                          <Text style={[styles.breakdownUnit, {color: config.color}]}>kg</Text>
-                          <Text style={[styles.breakdownPercent, {color: config.color}]}>{percentage}%</Text>
-                        </View>
-                      </View>
-                    </Card>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {totalKg === 0 && (
-            <Card style={styles.emptyCard}>
-              <MaterialCommunityIcons name="sprout" size={48} color="#10b981" />
-              <Text style={styles.emptyTitle}>Start Your Green Journey</Text>
-              <Text style={styles.emptyText}>Schedule your first pickup and watch your impact grow!</Text>
-            </Card>
-          )}
-        </Animated.View>
-
-        <View style={{height: 100}} />
+        <View style={{ height: 160 }} />
       </ScrollView>
+
+      {/* Sticky CTA */}
+      <View style={styles.ctaWrap}>
+        <TouchableOpacity
+          style={styles.ctaBtn}
+          onPress={() => navigation.navigate('Identify')}
+          activeOpacity={0.88}
+        >
+          <MaterialCommunityIcons name="recycle" size={20} color="#fff" />
+          <Text style={styles.ctaText}>Schedule Pickup ♻️</Text>
+        </TouchableOpacity>
+      </View>
     </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 },
+
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
   title: { fontSize: 22, fontWeight: '800', color: '#111827' },
 
-  quoteCard: { padding: 18, borderRadius: 16, backgroundColor: '#ecfdf5', marginBottom: 16, alignItems: 'center' },
-  quoteEmoji: { fontSize: 32, marginBottom: 8 },
-  quoteText: { fontSize: 15, fontWeight: '700', color: '#065f46', textAlign: 'center' },
+  heroCard: { borderRadius: 20, padding: 24, marginBottom: 20, overflow: 'hidden' },
+  heroBg: { position: 'absolute', right: -10, bottom: -10 },
+  heroEmoji: { fontSize: 36, marginBottom: 8 },
+  heroTitle: { fontSize: 20, fontWeight: '900', color: '#fff', lineHeight: 26 },
+  heroSub: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 6, lineHeight: 18 },
 
-  heroSection: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  mainStatCard: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  liveIndicatorTop: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: '#ecfdf5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981', marginRight: 4 },
-  liveText: { fontSize: 9, fontWeight: '800', color: '#10b981' },
-  mainStatValue: { fontSize: 36, fontWeight: '900', color: '#111827', marginTop: 8 },
-  mainStatLabel: { fontSize: 13, color: '#6b7280', marginTop: 4, fontWeight: '600' },
-  mainStatSub: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  metricsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  metricCard: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 18, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  metricIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  metricValue: { fontSize: 28, fontWeight: '900', color: '#111827' },
+  metricLabel: { fontSize: 12, color: '#6b7280', fontWeight: '600', marginTop: 2 },
+  metricHelper: { fontSize: 11, color: '#9ca3af', marginTop: 4 },
 
-  badgesSection: { marginBottom: 16 },
-  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  badge: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  badgeLabel: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  milestoneCard: { backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  milestoneTitle: { fontSize: 15, fontWeight: '800', color: '#111827', marginBottom: 4 },
+  milestoneSub: { fontSize: 12, color: '#6b7280', fontWeight: '600' },
+  milestoneCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#ecfdf5', borderWidth: 2.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
+  milestoneCircleVal: { fontSize: 13, fontWeight: '900', color: '#10b981' },
+  progressBg: { height: 10, backgroundColor: '#f1f5f9', borderRadius: 10, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 10 },
+  milestoneUnlock: { fontSize: 12, color: '#6b7280', marginTop: 8, fontWeight: '600' },
 
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 4 },
+  sectionHeader: { marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
 
-  impactGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12, marginBottom: 16 },
-  impactCard: { width: '48.5%', padding: 16, borderRadius: 14, alignItems: 'center', backgroundColor: '#fff' },
-  impactValue: { fontSize: 24, fontWeight: '900', color: '#111827', marginTop: 8 },
-  impactUnit: { fontSize: 11, color: '#6b7280', fontWeight: '600', marginTop: 2 },
-  impactLabel: { fontSize: 11, color: '#9ca3af', marginTop: 4, textAlign: 'center' },
+  emptyActivity: { alignItems: 'center', paddingVertical: 32, backgroundColor: '#fff', borderRadius: 16 },
+  emptyActivityText: { fontSize: 15, fontWeight: '700', color: '#9ca3af', marginTop: 10 },
+  emptyActivitySub: { fontSize: 12, color: '#d1d5db', marginTop: 4 },
 
-  funFactCard: { padding: 16, borderRadius: 14, backgroundColor: '#fffbeb', flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  funFactTitle: { fontSize: 13, fontWeight: '800', color: '#92400e', marginBottom: 4 },
-  funFactText: { fontSize: 12, color: '#78350f', lineHeight: 18 },
+  activityItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
+  activityIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  activityContent: { flex: 1 },
+  activityText: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  activityType: { fontSize: 12, color: '#9ca3af', marginTop: 3 },
 
-  progressCard: { padding: 18, borderRadius: 16, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, marginBottom: 16 },
-  progressTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  progressSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 4 },
-  milestoneCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#10b981' },
-  milestoneText: { fontSize: 20, fontWeight: '900', color: '#10b981' },
-  milestoneUnit: { fontSize: 10, color: '#059669', fontWeight: '600' },
-  progressBarBg: { height: 10, backgroundColor: '#f1f5f9', borderRadius: 10, overflow: 'hidden', marginTop: 16 },
-  progressBarFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 10 },
-
-  breakdownCard: { padding: 16, borderRadius: 14, marginBottom: 10 },
-  breakdownIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  breakdownName: { fontSize: 15, fontWeight: '800' },
-  breakdownFact: { fontSize: 10, marginTop: 2, opacity: 0.8 },
-  breakdownBar: { height: 6, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 3, marginTop: 8, overflow: 'hidden' },
-  breakdownBarFill: { height: '100%', borderRadius: 3 },
-  breakdownQty: { fontSize: 20, fontWeight: '900' },
-  breakdownUnit: { fontSize: 10, fontWeight: '600', marginTop: -2 },
-  breakdownPercent: { fontSize: 10, fontWeight: '600', marginTop: 2 },
-
-  emptyCard: { padding: 32, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', marginTop: 20 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginTop: 16 },
-  emptyText: { fontSize: 14, color: '#6b7280', marginTop: 8, textAlign: 'center' }
+  ctaWrap: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 90, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  ctaBtn: { backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 },
+  ctaText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
 
 export default MyImpactScreen;

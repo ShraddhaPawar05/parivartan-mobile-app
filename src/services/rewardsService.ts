@@ -6,6 +6,8 @@ export interface RewardTransaction {
   userId: string;
   requestId: string;
   points: number;
+  pointsSpent: number;
+  voucherTitle: string;
   type: 'earned' | 'redeemed';
   createdAt: any;
 }
@@ -76,31 +78,49 @@ export const getUserRewardHistory = async (userId: string): Promise<RewardTransa
   try {
     const q = query(
       collection(db, 'rewardTransactions'),
-      where('userId', '==', userId)
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
     );
 
     const querySnapshot = await getDocs(q);
     const transactions: RewardTransaction[] = [];
-
     querySnapshot.forEach((doc) => {
-      transactions.push({
-        id: doc.id,
-        ...doc.data()
-      } as RewardTransaction);
+      transactions.push({ id: doc.id, ...doc.data() } as RewardTransaction);
     });
-
-    // Sort by createdAt in JavaScript
-    transactions.sort((a, b) => {
-      const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt);
-      const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt);
-      return bTime.getTime() - aTime.getTime();
-    });
-
-
     return transactions;
   } catch (error) {
     return [];
   }
+};
+
+export const subscribeToRewardHistory = (
+  userId: string,
+  callback: (transactions: RewardTransaction[]) => void
+): (() => void) => {
+  const q = query(
+    collection(db, 'rewardTransactions'),
+    where('userId', '==', userId),
+    where('type', '==', 'redeemed')
+  );
+
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const transactions: RewardTransaction[] = [];
+      snapshot.forEach((d) => {
+        transactions.push({ id: d.id, ...d.data() } as RewardTransaction);
+      });
+      transactions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.()?.getTime() ?? 0;
+        const bTime = b.createdAt?.toDate?.()?.getTime() ?? 0;
+        return bTime - aTime;
+      });
+      callback(transactions);
+    },
+    () => callback([])
+  );
+
+  return unsubscribe;
 };
 
 export const subscribeToVouchers = (callback: (vouchers: Voucher[]) => void): (() => void) => {

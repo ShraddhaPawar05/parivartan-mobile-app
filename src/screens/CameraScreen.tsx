@@ -67,10 +67,19 @@ const CameraScreen: React.FC = () => {
     navigation.navigate('Main', {
       screen: 'Identify',
       params: {
-        screen: 'WasteIdentified',
-        params: { imageUri: capturedImage }
+        screen: 'IdentifyStart',
       }
     });
+    setTimeout(() => {
+      navigation.navigate('Main', {
+        screen: 'Identify',
+        params: {
+          screen: 'WasteIdentified',
+          params: { imageUri: capturedImage }
+        }
+      });
+    }, 100);
+    setCapturedImage(null);
   };
 
   if (capturedImage) {

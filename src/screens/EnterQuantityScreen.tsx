@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image, TextInput } from 'react-native';
 import { BackButton } from '../components';
 import ProgressBar from '../components/ProgressBar';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -90,13 +90,29 @@ const EnterQuantityScreen: React.FC = () => {
 
         <View style={{alignItems:'center', marginTop: 24}}>
           <Text style={{fontWeight:'800', fontSize:18, color: '#111827'}}>Number of items</Text>
-          <Text style={{color:'#6b7280', marginTop:8, fontSize: 14, textAlign: 'center'}}>Approximate count is fine. No need to be exact.</Text>
+          <Text style={{color:'#6b7280', marginTop:8, fontSize: 14, textAlign: 'center'}}>Enter the quantity (approximate count is fine)</Text>
         </View>
 
-        <View style={styles.counterRow}>
-          <TouchableOpacity style={styles.circle} onPress={() => setQuantity(Math.max(1, quantity - 1))}><Text style={{fontSize:24,color:'#10b981'}}>-</Text></TouchableOpacity>
-          <Text style={styles.qty}>{quantity}</Text>
-          <TouchableOpacity style={[styles.circle, {backgroundColor:'#10b981'}]} onPress={() => setQuantity(quantity + 1)}><Text style={{fontSize:24,color:'#fff'}}>+</Text></TouchableOpacity>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={quantity.toString()}
+            onChangeText={(text) => {
+              const num = parseInt(text) || 0;
+              setQuantity(Math.max(1, num));
+            }}
+            keyboardType="number-pad"
+            placeholder="Enter quantity"
+            placeholderTextColor="#9ca3af"
+          />
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.smallBtn} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
+              <Text style={styles.smallBtnText}>-1</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.smallBtn, styles.addBtn]} onPress={() => setQuantity(quantity + 1)}>
+              <Text style={[styles.smallBtnText, {color: '#fff'}]}>+1</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.note}>💡 Don't worry about exact numbers</Text>
@@ -133,12 +149,35 @@ const styles = StyleSheet.create({
   itemTitle: { fontWeight:'800', fontSize: 16, color: '#111827' },
   itemSub: { color:'#10b981', fontWeight:'700', marginTop:6, fontSize: 11 },
   edit: { marginLeft:'auto' },
-  toggles: { flexDirection:'row', backgroundColor:'#fff', padding:6, borderRadius:999, marginTop:30, alignSelf:'center' },
-  unit: { paddingHorizontal:18, paddingVertical:8, borderRadius:999, marginHorizontal:4 },
-  unitActive: { backgroundColor:'#10b981' },
-  counterRow: { flexDirection:'row', alignItems:'center', justifyContent:'center', marginTop:40 },
-  circle: { width:80, height:80, borderRadius:40, backgroundColor:'#fff', alignItems:'center', justifyContent:'center', shadowColor:'#000', shadowOpacity:0.06, shadowRadius:10, elevation:4 },
-  qty: { fontSize:64, fontWeight:'900', marginHorizontal:40, color: '#111827' },
+  inputContainer: { marginTop: 32, alignItems: 'center' },
+  input: { 
+    width: '80%',
+    fontSize: 48, 
+    fontWeight: '900', 
+    color: '#111827', 
+    textAlign: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4
+  },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  smallBtn: { 
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  addBtn: { backgroundColor: '#10b981' },
+  smallBtnText: { fontSize: 16, fontWeight: '700', color: '#10b981' },
   note: { textAlign:'center', color:'#6b7280', marginTop:24, fontSize: 14 },
   next: { backgroundColor:'#10b981', borderRadius:14, paddingVertical:16, alignItems:'center', marginTop:40, shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 },
   nextText: { color:'#fff', fontWeight:'800', fontSize: 16 },

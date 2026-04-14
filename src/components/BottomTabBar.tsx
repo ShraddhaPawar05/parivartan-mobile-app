@@ -32,11 +32,10 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
                 <Animated.View style={[styles.centerButton, { transform: [{ scale: pulse }], backgroundColor: '#10b981' }]}>
                   <TouchableOpacity
                     onPress={() => {
-                      // brief press feedback scale
                       Animated.sequence([
                         Animated.timing(pulse, { toValue: 0.92, duration: 120, useNativeDriver: true }),
                         Animated.spring(pulse, { toValue: 1.06, friction: 6, useNativeDriver: true }),
-                      ]).start(() => navigation.navigate(route.name, { screen: 'Identify', params: { _fresh: Date.now() } }));
+                      ]).start(() => navigation.navigate('Identify', { screen: 'IdentifyStart' }));
                     }}
                     activeOpacity={0.85}
                   >

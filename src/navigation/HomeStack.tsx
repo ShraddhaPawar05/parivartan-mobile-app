@@ -6,15 +6,21 @@ import RecyclerPartnersScreen from '../screens/RecyclerPartnersScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import LocationSetupScreen from '../screens/LocationSetupScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import CommunityScreen from '../screens/CommunityScreen';
+import MyPostsScreen from '../screens/MyPostsScreen';
+import ExploreMoreScreen from '../screens/ExploreMoreScreen';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
   RecyclerPartners: undefined;
   RecyclerPartnerDetail: { id: string; name?: string } | undefined;
   MyImpact: undefined;
+  Community: undefined;
+  MyPosts: undefined;
   Notifications: undefined;
   LocationSetup: undefined;
   EditProfile: undefined;
+  ExploreMore: undefined;
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
@@ -26,9 +32,12 @@ const HomeStack: React.FC = () => {
       <Stack.Screen name="RecyclerPartners" component={RecyclerPartnersScreen} />
       <Stack.Screen name="RecyclerPartnerDetail" component={require('../screens/RecyclerPartnerDetailScreen').default} />
       <Stack.Screen name="MyImpact" component={MyImpactScreen} />
+      <Stack.Screen name="Community" component={CommunityScreen} />
+      <Stack.Screen name="MyPosts" component={MyPostsScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="LocationSetup" component={LocationSetupScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="ExploreMore" component={ExploreMoreScreen} />
     </Stack.Navigator>
   );
 };

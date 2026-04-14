@@ -28,7 +28,7 @@ const RecyclerPartnersScreen: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
 
-  const wasteTypes = ['All', 'Plastic', 'Paper', 'Metal', 'Clothes', 'E-waste', 'Organic'];
+  const wasteTypes = ['All', 'Plastic', 'Paper', 'Metal', 'Clothes', 'Cardboard', 'Glass'];
 
   useEffect(() => {
     console.log('Selected filter:', selectedFilter);

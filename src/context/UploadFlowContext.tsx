@@ -24,6 +24,7 @@ type UploadFlowState = {
   setImageUrl: (url: string | null) => void;
   confidence?: number | null;
   setConfidence: (conf: number | null) => void;
+  resetFlow: () => void;
 };
 
 const UploadFlowContext = createContext<UploadFlowState | undefined>(undefined);
@@ -45,9 +46,19 @@ export const UploadFlowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const setPickupAddress = (a: PickupAddress | null) => setPickupAddressState(a);
   const setImageUrl = (url: string | null) => setImageUrlState(url);
   const setConfidence = (conf: number | null) => setConfidenceState(conf);
+  const resetFlow = () => {
+    setCategoryState(undefined);
+    setQuantityState(undefined);
+    setUnitState('kg');
+    setPickupTypeState('pickup');
+    setSelectedPartnerState(null);
+    setPickupAddressState(null);
+    setImageUrlState(null);
+    setConfidenceState(null);
+  };
 
   return (
-    <UploadFlowContext.Provider value={{ category, setCategory, quantity, setQuantity, unit, pickupType, setPickupType, selectedPartner, setSelectedPartner, pickupAddress, setPickupAddress, imageUrl, setImageUrl, confidence, setConfidence }}>
+    <UploadFlowContext.Provider value={{ category, setCategory, quantity, setQuantity, unit, pickupType, setPickupType, selectedPartner, setSelectedPartner, pickupAddress, setPickupAddress, imageUrl, setImageUrl, confidence, setConfidence, resetFlow }}>
       {children}
     </UploadFlowContext.Provider>
   );

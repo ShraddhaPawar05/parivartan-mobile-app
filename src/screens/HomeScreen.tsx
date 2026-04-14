@@ -170,8 +170,8 @@ const HomeScreen: React.FC = () => {
 
           <Animated.Text style={styles.pointsAmount}>{displayPoints.toLocaleString()}</Animated.Text>
 
-          <TouchableOpacity style={styles.viewDetails} activeOpacity={0.9} onPress={() => (navigation as any).navigate('MyImpact')}>
-            <Text style={styles.viewDetailsText}>View Details  →</Text>
+          <TouchableOpacity style={styles.viewDetails} activeOpacity={0.9} onPress={() => (navigation as any).navigate('ExploreMore')}>
+            <Text style={styles.viewDetailsText}>Explore More  →</Text>
           </TouchableOpacity>
         </LinearGradient>
 
@@ -187,10 +187,9 @@ const HomeScreen: React.FC = () => {
 Partners</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickCard} activeOpacity={0.9} onPress={() => (navigation as any).navigate('MyImpact')}>
-            <View style={styles.quickIconBg}><MaterialCommunityIcons name="chart-line" size={20} color="#10b981" /></View>
-            <Text style={styles.quickText}>My
-Impact</Text>
+          <TouchableOpacity style={styles.quickCard} activeOpacity={0.9} onPress={() => (navigation as any).navigate('Community')}>
+            <View style={styles.quickIconBg}><MaterialCommunityIcons name="account-group-outline" size={20} color="#10b981" /></View>
+            <Text style={styles.quickText}>Community</Text>
           </TouchableOpacity>
         </View>
 

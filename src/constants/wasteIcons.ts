@@ -7,10 +7,10 @@ export const wasteIconMap: Record<string, string> = {
   metal: 'cog',
   Clothes: 'tshirt-crew',
   clothes: 'tshirt-crew',
-  'E-waste': 'cellphone',
-  'e-waste': 'cellphone',
-  Organic: 'food-apple',
-  organic: 'food-apple',
+  Cardboard: 'package-variant',
+  cardboard: 'package-variant',
+  Glass: 'glass-fragile',
+  glass: 'glass-fragile',
 };
 
 export const wasteColorMap: Record<string, { bg: string; icon: string }> = {
@@ -22,10 +22,10 @@ export const wasteColorMap: Record<string, { bg: string; icon: string }> = {
   metal: { bg: '#f5f3ff', icon: '#8b5cf6' },
   Clothes: { bg: '#fdf4ff', icon: '#d946ef' },
   clothes: { bg: '#fdf4ff', icon: '#d946ef' },
-  'E-waste': { bg: '#fef3f2', icon: '#ef4444' },
-  'e-waste': { bg: '#fef3f2', icon: '#ef4444' },
-  Organic: { bg: '#f0fdf4', icon: '#10b981' },
-  organic: { bg: '#f0fdf4', icon: '#10b981' },
+  Cardboard: { bg: '#fef3c7', icon: '#d97706' },
+  cardboard: { bg: '#fef3c7', icon: '#d97706' },
+  Glass: { bg: '#ecfeff', icon: '#06b6d4' },
+  glass: { bg: '#ecfeff', icon: '#06b6d4' },
 };
 
 export function getWasteIcon(category?: string) {

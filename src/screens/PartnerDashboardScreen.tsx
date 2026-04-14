@@ -163,7 +163,7 @@ const PartnerDashboardScreen: React.FC = () => {
       const userId = requestData.userId;
 
       console.log('📦 Waste Type:', wasteType);
-      console.log('📦 Quantity:', quantity, 'kg');
+      console.log('📦 Quantity:', quantity);
       console.log('📦 User ID:', userId);
 
       // 3️⃣ Query rewardRules collection
@@ -202,7 +202,7 @@ const PartnerDashboardScreen: React.FC = () => {
         completedRequests: increment(1),
         totalWasteRecycled: increment(quantity)
       });
-      console.log('✅ User stats updated: +', ecoPointsAwarded, 'points, +', quantity, 'kg');
+      console.log('✅ User stats updated: +', ecoPointsAwarded, 'points, +', quantity, 'items');
 
       // 7️⃣ Create notification
       await addDoc(collection(db, 'notifications'), {

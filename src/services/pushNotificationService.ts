@@ -6,7 +6,8 @@ import { db } from '../firebase/firebase';
 // Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -54,13 +55,10 @@ export async function registerPushToken(userId: string): Promise<string | null> 
   try {
     console.log('📱 Registering push token for user:', userId);
 
-    // Get Expo push token (works in Expo Go without projectId)
     const tokenData = await Notifications.getExpoPushTokenAsync();
-    
     const pushToken = tokenData.data;
     console.log('✅ Expo push token:', pushToken);
 
-    // Save token to Firestore
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, {
       pushToken: pushToken,
@@ -70,13 +68,9 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     console.log('✅ Push token saved to Firestore');
     return pushToken;
   } catch (error: any) {
-    // Gracefully handle token errors - don't block app functionality
-    if (error?.message?.includes('projectId')) {
-      console.warn('⚠️ Push notifications require EAS project setup. Skipping for now.');
-      console.warn('   Run: eas init && eas build:configure');
-    } else {
-      console.error('❌ Error registering push token:', error);
-    }
+    // Silently skip — happens when google-services.json is missing or Firebase native not initialized
+    // This does NOT affect app functionality
+    console.warn('⚠️ Push token skipped (Firebase native not configured):', error?.message?.split('\n')[0]);
     return null;
   }
 }
@@ -103,6 +97,18 @@ export async function sendLocalPushNotification(
   } catch (error) {
     console.error('❌ Error sending local notification:', error);
   }
+}
+
+// Send availability check push notification
+export async function sendAvailabilityCheckNotification(
+  pickupDate: string,
+  pickupTime: string
+): Promise<void> {
+  await sendLocalPushNotification(
+    '📅 Pickup Availability Check',
+    `Are you available for your pickup on ${pickupDate} at ${pickupTime}? Please confirm in the app.`,
+    { type: 'availability_confirmation' }
+  );
 }
 
 // Send status update notification

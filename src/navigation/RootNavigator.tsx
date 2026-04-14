@@ -1,13 +1,13 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-
 import ProfileScreen from '../screens/ProfileScreen';
 import RewardsScreen from '../screens/RewardsScreen';
 import HomeStack from './HomeStack';
 import RequestsStack from './RequestsStack';
 import UploadStack from './UploadStack';
-
 import BottomTabBar from '../components/BottomTabBar';
+import { useAuth } from '../context/AuthContext';
+import { useAvailabilityNotifications } from '../hooks/useAvailabilityNotifications';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -20,6 +20,9 @@ export type RootTabParamList = {
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 const RootNavigator: React.FC = () => {
+  const { user } = useAuth();
+  useAvailabilityNotifications(user?.uid);
+
   return (
     <Tab.Navigator
       initialRouteName="Home"

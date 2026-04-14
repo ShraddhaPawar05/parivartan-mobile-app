@@ -13,7 +13,7 @@ import { getWasteIcon, getWasteColor } from '../constants/wasteIcons';
 const WasteIdentifiedScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const route: any = useRoute();
-  const { setCategory, setImageUrl, setConfidence } = useUploadFlow();
+  const { setCategory, setImageUrl, setConfidence, resetFlow } = useUploadFlow();
   const [showConfidence, setShowConfidence] = useState(false);
   const [predictedCategory, setPredictedCategory] = useState<string | null>(null);
   const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
@@ -70,7 +70,10 @@ const WasteIdentifiedScreen: React.FC = () => {
     <ScreenWrapper>
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <BackButton onPress={() => navigation.goBack()} style={styles.back} />
+          <BackButton onPress={() => {
+            resetFlow();
+            navigation.navigate('IdentifyStart');
+          }} style={styles.back} />
           <Text style={styles.title}>Waste Identified</Text>
           <View style={{width: 36}} />
         </View>

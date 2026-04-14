@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 're
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useRequests } from '../context';
 import { useAuth } from '../context/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,24 +44,21 @@ const ProfileScreen: React.FC = () => {
   React.useEffect(() => {
     if (!user?.uid) return;
 
-    const fetchRequests = async () => {
-      try {
-        const { getUserRequests } = require('../services/requestService');
-        const requests = await getUserRequests(user.uid);
-        setTotalRequests(requests.length);
-        const completed = requests.filter((r: any) => r.status === 'Completed');
-        setCompletedRequests(completed.length);
-        const kg = completed.reduce((sum: number, r: any) => {
-          const qty = r.quantity || 0;
-          return sum + qty;
-        }, 0);
-        setTotalKg(kg);
-      } catch (error) {
-        console.error('Error fetching requests:', error);
-      }
-    };
+    const q = query(
+      collection(db, 'wasteRequests'),
+      where('userId', '==', user.uid)
+    );
 
-    fetchRequests();
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setTotalRequests(all.length);
+      const completed = all.filter((r: any) => r.status === 'Completed');
+      setCompletedRequests(completed.length);
+      const kg = completed.reduce((sum: number, r: any) => sum + (r.quantity || 0), 0);
+      setTotalKg(kg);
+    });
+
+    return () => unsubscribe();
   }, [user?.uid]);
 
   const { signOut } = useAuth();
