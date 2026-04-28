@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Animated,
   ScrollView,
@@ -35,7 +35,7 @@ const HomeScreen: React.FC = () => {
   const [recentRequests, setRecentRequests] = useState<WasteRequest[]>([]);
   const [fullName, setFullName] = useState<string>('');
   const [ecoPoints, setEcoPoints] = useState<number>(0);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [unreadCount, setUnreadCount] = useState<number>(0);;
 
   // Subscribe to user data from Firestore
   React.useEffect(() => {
@@ -346,8 +346,6 @@ const styles = StyleSheet.create({
   recentHeaderRow: { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   viewAll: { color: '#10b981', fontWeight: '700' },
 
-  viewAll: { color: '#10b981', fontWeight: '700' },
-
   activityItem: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
   activityLeft: { flexDirection: 'row', alignItems: 'center' },
   activityIcon: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center' },
@@ -356,8 +354,6 @@ const styles = StyleSheet.create({
   activityPoints: { color: '#10b981', fontWeight: '700' },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginTop: 6 },
   statusText: { fontWeight: '700' },
-
-
 });
 
 export default HomeScreen;

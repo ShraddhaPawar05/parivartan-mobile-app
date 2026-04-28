@@ -14,10 +14,10 @@ const AppStack: React.FC = () => {
   return (
     <Stack.Navigator initialRouteName="Main" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={RootNavigator} />
-      <Stack.Screen 
-        name="Camera" 
-        component={CameraScreen} 
-        options={{ presentation: 'fullScreenModal' }} 
+      <Stack.Screen
+        name="Camera"
+        component={CameraScreen}
+        options={{ presentation: 'fullScreenModal' }}
       />
     </Stack.Navigator>
   );

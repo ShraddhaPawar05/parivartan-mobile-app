@@ -2,16 +2,24 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenWrapper from '../components/ScreenWrapper';
-import { useAuth } from '../context/AuthContext';
 import { auth } from '../firebase/firebase';
 import { createUserProfile } from '../services/userService';
 
 const SignUpScreen: React.FC = () => {
-  const { signUp } = useAuth();
-  const navigation: any = useNavigation();
+  const navigation = useNavigation<any>();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -31,7 +39,7 @@ const SignUpScreen: React.FC = () => {
       Alert.alert('Error', 'Please enter email and password');
       return;
     }
-    if (!phone.trim() || phone.trim().length !== 10 || !/^\d{10}$/.test(phone.trim())) {
+    if (!phoneValid) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
@@ -39,7 +47,6 @@ const SignUpScreen: React.FC = () => {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-
     setLoading(true);
     try {
       await AsyncStorage.removeItem('@parivartan:onboardingComplete');
@@ -55,13 +62,19 @@ const SignUpScreen: React.FC = () => {
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.logoWrap}>
-            <View style={styles.logoCircle}><MaterialCommunityIcons name="leaf" size={36} color="#10b981" /></View>
+            <View style={styles.logoCircle}>
+              <MaterialCommunityIcons name="leaf" size={36} color="#10b981" />
+            </View>
           </View>
 
           <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>Start your recycling journey — we'll use your details to coordinate pickups</Text>
+          <Text style={styles.subtitle}>Start your recycling journey</Text>
 
           <TextInput
             value={name}
@@ -87,7 +100,7 @@ const SignUpScreen: React.FC = () => {
           <TextInput
             value={phone}
             onChangeText={setPhone}
-            placeholder="Enter phone number"
+            placeholder="Phone number (10 digits)"
             placeholderTextColor="#6B7280"
             style={styles.input}
             keyboardType="phone-pad"
@@ -144,13 +157,17 @@ const SignUpScreen: React.FC = () => {
 
           <Text style={styles.terms}>By continuing, you agree to our terms</Text>
 
-          <TouchableOpacity style={[styles.primary, (!canCreate || loading) ? { opacity: 0.5 } : null]} onPress={onCreate} disabled={!canCreate || loading}>
+          <TouchableOpacity
+            style={[styles.primary, (!canCreate || loading) && { opacity: 0.5 }]}
+            onPress={onCreate}
+            disabled={!canCreate || loading}
+          >
             <Text style={styles.primaryText}>{loading ? 'Creating Account...' : 'Create Account'}</Text>
           </TouchableOpacity>
 
           <View style={styles.bottomRow}>
             <Text style={styles.bottomText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SignIn' as never)}>
+            <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
               <Text style={styles.bottomAction}>Sign in</Text>
             </TouchableOpacity>
           </View>
@@ -163,40 +180,26 @@ const SignUpScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { padding: 20, paddingTop: 36, flexGrow: 1, justifyContent: 'center' },
   logoWrap: { alignItems: 'center', marginBottom: 12 },
-  logoCircle: { width: 80, height: 80, borderRadius: 20, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  logoCircle: {
+    width: 80, height: 80, borderRadius: 20, backgroundColor: '#ecfdf5',
+    alignItems: 'center', justifyContent: 'center', elevation: 2,
+  },
   title: { fontSize: 24, fontWeight: '800', marginTop: 12, textAlign: 'center', color: '#111827' },
   subtitle: { color: '#6b7280', marginTop: 8, textAlign: 'center', fontSize: 14, lineHeight: 20 },
   input: {
-    width: '100%',
-    backgroundColor: '#fff',
-    color: '#111827',
-    padding: 14,
-    fontSize: 15,
-    borderRadius: 12,
-    marginTop: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
+    backgroundColor: '#fff', color: '#111827', padding: 14, fontSize: 15,
+    borderRadius: 12, marginTop: 12, borderWidth: 1.5, borderColor: '#E5E7EB', elevation: 1,
   },
   passwordWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginTop: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 12, marginTop: 12, borderWidth: 1.5, borderColor: '#E5E7EB', elevation: 1,
   },
   passwordInput: { flex: 1, padding: 14, fontSize: 15, color: '#111827' },
   eyeBtn: { paddingHorizontal: 14 },
-  primary: { width: '100%', backgroundColor: '#10b981', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 24, shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 },
+  primary: {
+    backgroundColor: '#10b981', paddingVertical: 16, borderRadius: 14,
+    alignItems: 'center', marginTop: 24, elevation: 4,
+  },
   primaryText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   terms: { color: '#6b7280', marginTop: 8, fontSize: 12 },
   bottomRow: { flexDirection: 'row', marginTop: 18, justifyContent: 'center', marginBottom: 20 },
