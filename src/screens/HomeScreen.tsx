@@ -18,19 +18,21 @@ import { useAuth } from '../context/AuthContext';
 import { getActiveRequest, getUserRequests, WasteRequest, subscribeToUserRequests } from '../services/requestService';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
+import { useLanguage } from '../context/LanguageContext';
 
-const getGreeting = () => {
+const getGreeting = (t: (k: string) => string) => {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return 'Good Morning';
-  if (hour >= 12 && hour < 17) return 'Good Afternoon';
-  if (hour >= 17 && hour < 22) return 'Good Evening';
-  return 'Good Night';
+  if (hour >= 5 && hour < 12) return t('home.goodMorning');
+  if (hour >= 12 && hour < 17) return t('home.goodAfternoon');
+  if (hour >= 17 && hour < 22) return t('home.goodEvening');
+  return t('home.goodNight');
 };
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const { points, requests } = useRequests();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [activeRequest, setActiveRequest] = useState<WasteRequest | null>(null);
   const [recentRequests, setRecentRequests] = useState<WasteRequest[]>([]);
   const [fullName, setFullName] = useState<string>('');
@@ -121,17 +123,26 @@ const HomeScreen: React.FC = () => {
     return () => animPoints.removeListener(id);
   }, [ecoPoints]);
 
-  const greeting = getGreeting();
+  const greeting = getGreeting(t);
   const firstName = fullName.split(' ')[0] || 'User';
 
-  const recent = recentRequests.map(req => ({
-    id: req.id,
-    category: req.type || req.wasteType || 'General',
-    title: `${req.type || req.wasteType || 'Waste'} Waste ${req.status === 'pending' ? 'Pickup' : 'Request'}`,
-    subtitle: new Date(req.createdAt?.toDate?.() || req.createdAt).toLocaleDateString(),
-    points: req.status === 'completed' ? '+50 pts' : '',
-    status: req.status === 'pending' ? 'Pending' : req.status.charAt(0).toUpperCase() + req.status.slice(1)
-  }));
+  const recent = recentRequests.map(req => {
+    const cat = req.type || req.wasteType || 'Unknown';
+    const translatedCat = t(`wasteCategory.${cat.toLowerCase()}`) || cat;
+    const rawStatus = req.status || 'Pending';
+    const normalizedStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+    const translatedStatus = t(`status.${normalizedStatus}`) || normalizedStatus;
+    const actionKey = rawStatus === 'pending' ? 'home.wastePickup' : 'home.wasteRequest';
+    return {
+      id: req.id,
+      category: cat,
+      title: `${translatedCat} ${t(actionKey)}`,
+      subtitle: new Date(req.createdAt?.toDate?.() || req.createdAt).toLocaleDateString(),
+      points: rawStatus === 'completed' ? '+50 pts' : '',
+      status: translatedStatus,
+      rawStatus: normalizedStatus,
+    };
+  });
 
   return (
     <ScreenWrapper>
@@ -165,76 +176,75 @@ const HomeScreen: React.FC = () => {
           <MaterialCommunityIcons name="leaf" size={160} color="rgba(255,255,255,0.06)" style={{position:'absolute', right:-20, top:-30}} />
           <View style={styles.pointsHeader}>
             <MaterialCommunityIcons name="leaf" size={16} color="rgba(255,255,255,0.95)" />
-            <Text style={styles.pointsTitle}>GREEN POINTS BALANCE</Text>
+            <Text style={styles.pointsTitle}>{t('home.greenPoints')}</Text>
           </View>
 
           <Animated.Text style={styles.pointsAmount}>{displayPoints.toLocaleString()}</Animated.Text>
 
           <TouchableOpacity style={styles.viewDetails} activeOpacity={0.9} onPress={() => (navigation as any).navigate('ExploreMore')}>
-            <Text style={styles.viewDetailsText}>Explore More  →</Text>
+            <Text style={styles.viewDetailsText}>{t('home.exploreMore')}</Text>
           </TouchableOpacity>
         </LinearGradient>
 
         {/* Quick Actions */}
         <View style={[styles.sectionHeaderRow, {marginTop:12}]}> 
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('home.quickActions')}</Text>
         </View>
 
         <View style={[styles.quickRow, {marginTop:16}] }>
           <TouchableOpacity style={styles.quickCard} activeOpacity={0.9} onPress={() => (navigation as any).navigate('RecyclerPartners')}>
             <View style={styles.quickIconBg}><MaterialCommunityIcons name="account-group" size={18} color="#10b981" /></View>
-            <Text style={styles.quickText}>Recycler
-Partners</Text>
+            <Text style={styles.quickText}>{t('home.recyclerPartners')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.quickCard} activeOpacity={0.9} onPress={() => (navigation as any).navigate('Community')}>
             <View style={styles.quickIconBg}><MaterialCommunityIcons name="account-group-outline" size={20} color="#10b981" /></View>
-            <Text style={styles.quickText}>Community</Text>
+            <Text style={styles.quickText}>{t('home.community')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Daily Eco-Tips */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, {marginTop:18}]}>Daily Eco-Tips</Text>
-          <Text style={styles.dailyBadge}>Updates Daily</Text>
+          <Text style={[styles.sectionTitle, {marginTop:18}]}>{t('home.dailyEcoTips')}</Text>
+          <Text style={styles.dailyBadge}>{t('home.updatesDaily')}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:16, marginBottom:12}}>
           <LinearGradient colors={['#10b981', '#059669']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginTop:8}]}>
             <MaterialCommunityIcons name="recycle" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={styles.tipBadge}><Text style={styles.tipBadgeText}>💡 DID YOU KNOW?</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>Recycling 1 ton of paper saves 17 trees and 7,000 gallons of water!</Text>
+            <View style={styles.tipBadge}><Text style={styles.tipBadgeText}>{t('home.tip1badge')}</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip1')}</Text>
             <View style={styles.tipFooter}>
-              <Text style={styles.tipFooterText}>Impact: High</Text>
+              <Text style={styles.tipFooterText}>{t('home.tip1impact')}</Text>
             </View>
           </LinearGradient>
 
           <LinearGradient colors={['#3b82f6', '#2563eb']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
             <MaterialCommunityIcons name="water" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>🌊 WATER FACT</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>Recycling plastic saves 50L of water per kg. Every drop counts!</Text>
+            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>{t('home.tip2badge')}</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip2')}</Text>
           </LinearGradient>
 
           <LinearGradient colors={['#f59e0b', '#d97706']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
             <MaterialCommunityIcons name="lightning-bolt" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>⚡ ENERGY TIP</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>Recycling aluminum uses 95% less energy than making new cans from raw materials.</Text>
+            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>{t('home.tip3badge')}</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip3')}</Text>
             <View style={styles.tipFooter}>
-              <Text style={styles.tipFooterText}>Save Energy!</Text>
+              <Text style={styles.tipFooterText}>{t('home.tip3footer')}</Text>
             </View>
           </LinearGradient>
 
           <LinearGradient colors={['#8b5cf6', '#7c3aed']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
             <MaterialCommunityIcons name="earth" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>🌍 PLANET FACT</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>E-waste contains precious metals like gold and silver. Recycling recovers them!</Text>
+            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>{t('home.tip4badge')}</Text></View>
+            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip4')}</Text>
           </LinearGradient>
         </ScrollView>
 
         {/* Recent Activity */}
         <View style={styles.recentHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>{t('home.recentActivity')}</Text>
           <TouchableOpacity onPress={() => (navigation as any).navigate('Requests')}>
-            <Text style={styles.viewAll}>View All</Text>
+            <Text style={styles.viewAll}>{t('common.viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -252,15 +262,15 @@ Partners</Text>
 
               <View style={{alignItems: 'flex-end'}}>
                 {item.points ? <Text style={styles.activityPoints}>{item.points}</Text> : null}
-                <View style={[styles.statusBadge, item.status === 'Completed' ? {backgroundColor: '#ecfdf5'} : {backgroundColor: '#fff7ed'}]}>
-                  <Text style={[styles.statusText, item.status === 'Completed' ? {color: '#10b981'} : {color: '#f97316'}]}>{item.status}</Text>
+                <View style={[styles.statusBadge, item.rawStatus === 'Completed' ? {backgroundColor: '#ecfdf5'} : {backgroundColor: '#fff7ed'}]}>
+                  <Text style={[styles.statusText, item.rawStatus === 'Completed' ? {color: '#10b981'} : {color: '#f97316'}]}>{item.status}</Text>
                 </View>
               </View>
             </View>
           );
         }) : (
           <View style={styles.activityItem}>
-            <Text style={{color: '#6b7280', textAlign: 'center', width: '100%'}}>No recent activity</Text>
+            <Text style={{color: '#6b7280', textAlign: 'center', width: '100%'}}>{t('home.noRecentActivity')}</Text>
           </View>
         )}
 

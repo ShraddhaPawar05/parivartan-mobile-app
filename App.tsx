@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 import { RequestsProvider } from './src/context/RequestsContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import AuthStack from './src/navigation/AuthStack';
@@ -126,11 +127,13 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <AuthProvider>
-          <ThemeProvider>
-            <RequestsProvider>
-              <AppRoot />
-            </RequestsProvider>
-          </ThemeProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+              <RequestsProvider>
+                <AppRoot />
+              </RequestsProvider>
+            </ThemeProvider>
+          </LanguageProvider>
         </AuthProvider>
       </NavigationContainer>
     </SafeAreaProvider>

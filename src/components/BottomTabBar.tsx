@@ -2,12 +2,15 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLanguage } from '../context/LanguageContext';
 
 const TAB_HEIGHT = 70;
 const CENTER_SIZE = 64;
 
 export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const pulse = React.useRef(new Animated.Value(1)).current;
+  const { t } = useLanguage();
+
   React.useEffect(() => {
     Animated.loop(Animated.sequence([
       Animated.timing(pulse, { toValue: 1.06, duration: 900, useNativeDriver: true }),
@@ -24,6 +27,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
           const focused = state.index === index;
           const color = focused ? '#10b981' : '#9ca3af';
           const centerIndex = Math.floor(state.routes.length / 2);
+          const label = t(`tabs.${route.name}` as any) || route.name;
 
           // Center slot should be the Identify action
           if (index === centerIndex) {
@@ -42,7 +46,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
                     <Ionicons name="qr-code" size={28} color="#fff" />
                   </TouchableOpacity>
                 </Animated.View>
-                <Text style={[styles.label, { color, opacity: focused ? 1 : 0 }]}>{route.name}</Text>
+                <Text style={[styles.label, { color, opacity: focused ? 1 : 0 }]}>{label}</Text>
               </View>
             );
           }
@@ -61,7 +65,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
               activeOpacity={0.8}
             >
               {icon}
-              <Text style={[styles.label, { color, opacity: focused ? 1 : 0 }]}>{route.name}</Text>
+              <Text style={[styles.label, { color, opacity: focused ? 1 : 0 }]}>{label}</Text>
             </TouchableOpacity>
           );
         })}

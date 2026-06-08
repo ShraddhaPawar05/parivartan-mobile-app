@@ -5,6 +5,7 @@ import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View, Activity
 import ScreenWrapper from '../components/ScreenWrapper';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
+import { useLanguage } from '../context/LanguageContext';
 
 type Partner = {
   id: string;
@@ -20,6 +21,7 @@ type Partner = {
 
 const RecyclerPartnersScreen: React.FC = () => {
   const navigation: any = useNavigation();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [favorites, setFavorites] = React.useState<Record<string, boolean>>({});
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -28,7 +30,8 @@ const RecyclerPartnersScreen: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
 
-  const wasteTypes = ['All', 'Plastic', 'Paper', 'Metal', 'Clothes', 'Cardboard', 'Glass'];
+  const wasteTypeKeys = ['All', 'Plastic', 'Paper', 'Metal', 'Clothes', 'Cardboard', 'Glass'];
+  const wasteTypes = wasteTypeKeys.map(k => k === 'All' ? t('recyclerPartners.filterAll') : k);
 
   useEffect(() => {
     console.log('Selected filter:', selectedFilter);
@@ -84,12 +87,12 @@ const RecyclerPartnersScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}><MaterialCommunityIcons name="chevron-left" size={24} color="#111827" /></TouchableOpacity>
-          <Text style={styles.title}>Recycler Partners</Text>
+          <Text style={styles.title}>{t('recyclerPartners.title')}</Text>
           <View style={{width:36}} />
         </View>
 
         <TextInput 
-          placeholder="Search recycler or waste type" 
+          placeholder={t('recyclerPartners.searchPlaceholder')} 
           placeholderTextColor="#6B7280"
           value={searchQuery} 
           onChangeText={setSearchQuery} 
@@ -97,13 +100,13 @@ const RecyclerPartnersScreen: React.FC = () => {
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 16}}>
-          {wasteTypes.map(type => (
+          {wasteTypeKeys.map((key, idx) => (
             <TouchableOpacity 
-              key={type} 
-              style={[styles.filterChip, selectedFilter === type && styles.filterChipActive]} 
-              onPress={() => setSelectedFilter(type)}
+              key={key} 
+              style={[styles.filterChip, selectedFilter === key && styles.filterChipActive]} 
+              onPress={() => setSelectedFilter(key)}
             >
-              <Text style={[styles.filterChipText, selectedFilter === type && styles.filterChipTextActive]}>{type}</Text>
+              <Text style={[styles.filterChipText, selectedFilter === key && styles.filterChipTextActive]}>{wasteTypes[idx]}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -112,11 +115,11 @@ const RecyclerPartnersScreen: React.FC = () => {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#10b981" />
-            <Text style={styles.loadingText}>Loading partners...</Text>
+            <Text style={styles.loadingText}>{t('recyclerPartners.loadingPartners')}</Text>
           </View>
         ) : filtered.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No partners found</Text>
+            <Text style={styles.emptyText}>{t('recyclerPartners.noPartners')}</Text>
           </View>
         ) : (
           <FlatList
@@ -159,7 +162,7 @@ const RecyclerPartnersScreen: React.FC = () => {
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
-                <Text style={styles.modalTitle}>Partner Details</Text>
+                <Text style={styles.modalTitle}>{t('recyclerPartners.partnerDetails')}</Text>
                 <TouchableOpacity onPress={() => setShowDetailModal(false)} style={{width: 32, height: 32, borderRadius: 16, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center'}}>
                   <MaterialCommunityIcons name="close" size={20} color="#6b7280" />
                 </TouchableOpacity>
@@ -179,31 +182,31 @@ const RecyclerPartnersScreen: React.FC = () => {
                     <View style={styles.detailRow}>
                       <MaterialCommunityIcons name="map-marker" size={20} color="#ef4444" />
                       <View style={{flex: 1, marginLeft: 12}}>
-                        <Text style={styles.detailLabel}>Address</Text>
-                        <Text style={styles.detailValue}>{selectedPartner.address || 'Not available'}</Text>
+                        <Text style={styles.detailLabel}>{t('recyclerPartners.address')}</Text>
+                        <Text style={styles.detailValue}>{selectedPartner.address || t('common.notAvailable')}</Text>
                       </View>
                     </View>
 
                     <View style={styles.detailRow}>
                       <MaterialCommunityIcons name="phone" size={20} color="#10b981" />
                       <View style={{flex: 1, marginLeft: 12}}>
-                        <Text style={styles.detailLabel}>Phone</Text>
-                        <Text style={styles.detailValue}>{selectedPartner.phone || 'Not available'}</Text>
+                        <Text style={styles.detailLabel}>{t('recyclerPartners.phone')}</Text>
+                        <Text style={styles.detailValue}>{selectedPartner.phone || t('common.notAvailable')}</Text>
                       </View>
                     </View>
 
                     <View style={styles.detailRow}>
                       <MaterialCommunityIcons name="email" size={20} color="#3b82f6" />
                       <View style={{flex: 1, marginLeft: 12}}>
-                        <Text style={styles.detailLabel}>Email</Text>
-                        <Text style={styles.detailValue}>{selectedPartner.email || 'Not available'}</Text>
+                        <Text style={styles.detailLabel}>{t('recyclerPartners.email')}</Text>
+                        <Text style={styles.detailValue}>{selectedPartner.email || t('common.notAvailable')}</Text>
                       </View>
                     </View>
 
                     <View style={styles.detailRow}>
                       <MaterialCommunityIcons name="recycle-variant" size={20} color="#8b5cf6" />
                       <View style={{flex: 1, marginLeft: 12}}>
-                        <Text style={styles.detailLabel}>Supported Waste Types</Text>
+                        <Text style={styles.detailLabel}>{t('recyclerPartners.supportedWasteTypes')}</Text>
                         <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8}}>
                           {(selectedPartner.supportedWasteTypes || []).map(w => (
                             <View key={w} style={styles.chip}><Text style={{fontSize:11, color:'#065f46', fontWeight:'700'}}>{w}</Text></View>
@@ -214,7 +217,7 @@ const RecyclerPartnersScreen: React.FC = () => {
                   </View>
 
                   <TouchableOpacity style={styles.closeButton} onPress={() => setShowDetailModal(false)}>
-                    <Text style={styles.closeButtonText}>Close</Text>
+                    <Text style={styles.closeButtonText}>{t('recyclerPartners.close')}</Text>
                   </TouchableOpacity>
                 </>
               )}

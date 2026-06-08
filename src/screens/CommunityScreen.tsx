@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import ScreenWrapper from '../components/ScreenWrapper';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinary } from '../services/cloudinaryService';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Post {
   id: string;
@@ -44,23 +45,10 @@ interface LeaderUser {
   postCount: number;
 }
 
-const QUOTES = [
-  'Small actions create big impact ♻️',
-  'Your waste can become someone\'s resource 🌱',
-  'Together, we build a cleaner future 🌍',
-  'Every small step counts towards a greener planet 🌿',
-  'Recycle today for a better tomorrow ✨',
-];
-
-const AWARENESS_POSTS = [
-  { id: 'sys1', badge: '♻️ Tip', caption: 'Segregate your waste at source: wet, dry, and hazardous. It makes recycling 3x more efficient!' },
-  { id: 'sys2', badge: '🌍 Fact', caption: 'Only 9% of all plastic ever produced has been recycled. Your actions make a real difference.' },
-  { id: 'sys3', badge: '📦 Guide', caption: 'Flatten cardboard boxes before recycling — it saves 60% more space in collection vehicles.' },
-];
-
 const CommunityScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const { t } = useLanguage();
   const [posts, setPosts] = useState<Post[]>([]);
   const [leaders, setLeaders] = useState<LeaderUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +69,13 @@ const CommunityScreen: React.FC = () => {
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
+  const QUOTE_KEYS = ['quote1', 'quote2', 'quote3', 'quote4', 'quote5'] as const;
+  const AWARENESS_KEYS = [
+    { badge: 'awareness1badge', text: 'awareness1', id: 'sys1' },
+    { badge: 'awareness2badge', text: 'awareness2', id: 'sys2' },
+    { badge: 'awareness3badge', text: 'awareness3', id: 'sys3' },
+  ];
+
   // Rotate quotes every 4s
   useEffect(() => {
     const interval = setInterval(() => {
@@ -88,7 +83,7 @@ const CommunityScreen: React.FC = () => {
         Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
         Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       ]).start();
-      setQuoteIdx(i => (i + 1) % QUOTES.length);
+      setQuoteIdx(i => (i + 1) % QUOTE_KEYS.length);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -110,7 +105,6 @@ const CommunityScreen: React.FC = () => {
       setPosts(fetched);
       setLoading(false);
 
-      // Build leaderboard from post counts
       const countMap: Record<string, { name: string; count: number }> = {};
       snap.docs.forEach(d => {
         const data = d.data();
@@ -187,10 +181,10 @@ const CommunityScreen: React.FC = () => {
       });
       setShowCommentActionModal(false);
       setSelectedComment(null);
-      Alert.alert('Success', 'Comment reported successfully');
+      Alert.alert(t('common.success'), t('community.commentReported'));
     } catch (error) {
       console.error('Error reporting comment:', error);
-      Alert.alert('Error', 'Failed to report comment');
+      Alert.alert(t('common.error'), t('community.commentReportFailed'));
     }
   };
 
@@ -210,7 +204,7 @@ const CommunityScreen: React.FC = () => {
       setCommentText('');
     } catch (error) {
       console.error('❌ Error adding comment:', error);
-      Alert.alert('Error', 'Failed to post comment.');
+      Alert.alert(t('common.error'), t('community.commentFailed'));
     } finally {
       setSubmittingComment(false);
     }
@@ -224,21 +218,21 @@ const CommunityScreen: React.FC = () => {
   const deletePost = async () => {
     if (!selectedPost) return;
     Alert.alert(
-      'Delete Post',
-      'Are you sure you want to delete this post? This action cannot be undone.',
+      t('community.deletePost'),
+      t('community.deletePostConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'communityPosts', selectedPost.id));
               setShowMenuModal(false);
-              Alert.alert('Success', 'Post deleted successfully');
+              Alert.alert(t('common.success'), t('community.postDeleted'));
             } catch (error) {
               console.error('Error deleting post:', error);
-              Alert.alert('Error', 'Failed to delete post');
+              Alert.alert(t('common.error'), t('community.postDeleteFailed'));
             }
           }
         }
@@ -252,26 +246,26 @@ const CommunityScreen: React.FC = () => {
       await addDoc(collection(db, 'reports'), {
         postId: selectedPost.id,
         reportedBy: user.uid,
-        reason: 'Inappropriate content', // Could be made selectable in future
+        reason: 'Inappropriate content',
         createdAt: serverTimestamp()
       });
       setShowMenuModal(false);
-      Alert.alert('Success', 'Post reported successfully');
+      Alert.alert(t('common.success'), t('community.postReported'));
     } catch (error) {
       console.error('Error reporting post:', error);
-      Alert.alert('Error', 'Failed to report post');
+      Alert.alert(t('common.error'), t('community.postReportFailed'));
     }
   };
 
   const deleteComment = async (commentId: string) => {
     if (!activePostId) return;
     Alert.alert(
-      'Delete Comment',
-      'Are you sure you want to delete this comment?',
+      t('community.deleteComment'),
+      t('community.deleteCommentConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -279,10 +273,10 @@ const CommunityScreen: React.FC = () => {
               await updateDoc(doc(db, 'communityPosts', activePostId), {
                 commentCount: increment(-1),
               });
-              Alert.alert('Success', 'Comment deleted successfully');
+              Alert.alert(t('common.success'), t('community.commentDeleted'));
             } catch (error) {
               console.error('Error deleting comment:', error);
-              Alert.alert('Error', 'Failed to delete comment');
+              Alert.alert(t('common.error'), t('community.commentDeleteFailed'));
             }
           }
         }
@@ -296,7 +290,7 @@ const CommunityScreen: React.FC = () => {
   };
 
   const submitPost = async () => {
-    if (!caption.trim()) { Alert.alert('Add a caption'); return; }
+    if (!caption.trim()) { Alert.alert(t('community.addCaption')); return; }
     setPosting(true);
     try {
       let imageUrl: string | undefined;
@@ -315,19 +309,20 @@ const CommunityScreen: React.FC = () => {
       setPickedImage(null);
       setShowPostModal(false);
     } catch {
-      Alert.alert('Error', 'Failed to post. Try again.');
+      Alert.alert(t('common.error'), t('community.postFailed'));
     } finally {
       setPosting(false);
     }
   };
 
   const buildFeed = () => {
-    const feed: (Post & { _sys?: boolean } | typeof AWARENESS_POSTS[0] & { _sys: boolean })[] = [];
+    const feed: any[] = [];
     let sysIdx = 0;
     posts.forEach((p, i) => {
-      feed.push(p as any);
-      if ((i + 1) % 3 === 0 && sysIdx < AWARENESS_POSTS.length) {
-        feed.push({ ...AWARENESS_POSTS[sysIdx++], _sys: true } as any);
+      feed.push(p);
+      if ((i + 1) % 3 === 0 && sysIdx < AWARENESS_KEYS.length) {
+        const key = AWARENESS_KEYS[sysIdx++];
+        feed.push({ id: key.id, badge: t(`community.${key.badge}` as any), caption: t(`community.${key.text}` as any), _sys: true });
       }
     });
     return feed;
@@ -342,7 +337,7 @@ const CommunityScreen: React.FC = () => {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <MaterialCommunityIcons name="arrow-left" size={22} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.header}>Community</Text>
+          <Text style={styles.header}>{t('community.title')}</Text>
           <TouchableOpacity style={styles.myPostsBtn} onPress={() => navigation.navigate('MyPosts')} activeOpacity={0.8}>
             <MaterialCommunityIcons name="account-outline" size={22} color="#111827" />
           </TouchableOpacity>
@@ -351,15 +346,15 @@ const CommunityScreen: React.FC = () => {
         {/* Hero Quote Card */}
         <LinearGradient colors={['#10b981', '#059669']} start={[0, 0]} end={[1, 1]} style={styles.heroCard}>
           <MaterialCommunityIcons name="leaf" size={80} color="rgba(255,255,255,0.08)" style={styles.heroBg} />
-          <Text style={styles.heroLabel}>💬 DAILY INSPIRATION</Text>
+          <Text style={styles.heroLabel}>{t('community.dailyInspiration')}</Text>
           <Animated.Text style={[styles.heroQuote, { opacity: fadeAnim }]}>
-            {QUOTES[quoteIdx]}
+            {t(`community.${QUOTE_KEYS[quoteIdx]}` as any)}
           </Animated.Text>
         </LinearGradient>
 
         {/* Community Feed */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>📰 Community Feed</Text>
+          <Text style={styles.sectionTitle}>{t('community.communityFeed')}</Text>
         </View>
 
         {loading ? (
@@ -367,7 +362,7 @@ const CommunityScreen: React.FC = () => {
         ) : buildFeed().length === 0 ? (
           <View style={styles.emptyFeed}>
             <MaterialCommunityIcons name="post-outline" size={40} color="#d1d5db" />
-            <Text style={styles.emptyText}>No posts yet. Be the first!</Text>
+            <Text style={styles.emptyText}>{t('community.noPostsYet')}</Text>
           </View>
         ) : buildFeed().map((item: any, idx) => {
           if (item._sys) {
@@ -390,10 +385,7 @@ const CommunityScreen: React.FC = () => {
                   <Text style={styles.postUser}>{post.userName}</Text>
                   {post.badge && <Text style={styles.verifiedBadge}>{post.badge}</Text>}
                 </View>
-                <TouchableOpacity
-                  style={styles.menuBtn}
-                  onPress={() => showPostMenu(post)}
-                >
+                <TouchableOpacity style={styles.menuBtn} onPress={() => showPostMenu(post)}>
                   <MaterialCommunityIcons name="dots-vertical" size={20} color="#6b7280" />
                 </TouchableOpacity>
               </View>
@@ -417,16 +409,16 @@ const CommunityScreen: React.FC = () => {
 
         {/* Leaderboard */}
         <View style={[styles.sectionRow, { marginTop: 8 }]}>
-          <Text style={styles.sectionTitle}>🥇 Leaderboard</Text>
+          <Text style={styles.sectionTitle}>{t('community.leaderboard')}</Text>
         </View>
         <View style={styles.leaderCard}>
           {leaders.length === 0 ? (
-            <Text style={styles.emptyText}>No activity yet</Text>
+            <Text style={styles.emptyText}>{t('community.noActivity')}</Text>
           ) : leaders.map((u, i) => (
             <View key={u.id} style={[styles.leaderRow, i < leaders.length - 1 && styles.leaderBorder]}>
               <Text style={styles.medal}>{medals[i]}</Text>
               <Text style={styles.leaderName}>{u.name}</Text>
-              <Text style={styles.leaderPosts}>{u.postCount} posts</Text>
+              <Text style={styles.leaderPosts}>{u.postCount} {t('community.posts')}</Text>
             </View>
           ))}
         </View>
@@ -444,20 +436,20 @@ const CommunityScreen: React.FC = () => {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>Share Your Impact</Text>
+              <Text style={styles.modalTitle}>{t('community.shareYourImpact')}</Text>
               <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
                 {pickedImage ? (
                   <Image source={{ uri: pickedImage }} style={styles.pickedImg} resizeMode="cover" />
                 ) : (
                   <View style={styles.imagePickerInner}>
                     <Feather name="image" size={24} color="#9ca3af" />
-                    <Text style={styles.imagePickerText}>Add Photo (optional)</Text>
+                    <Text style={styles.imagePickerText}>{t('community.addPhotoOptional')}</Text>
                   </View>
                 )}
               </TouchableOpacity>
               <TextInput
                 style={styles.captionInput}
-                placeholder="What did you recycle today? (e.g., 3 plastic bottles)"
+                placeholder={t('community.captionPlaceholder')}
                 placeholderTextColor="#9ca3af"
                 value={caption}
                 onChangeText={setCaption}
@@ -466,10 +458,10 @@ const CommunityScreen: React.FC = () => {
               />
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowPostModal(false); setCaption(''); setPickedImage(null); }}>
-                  <Text style={styles.cancelText}>Cancel</Text>
+                  <Text style={styles.cancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.postBtn} onPress={submitPost} disabled={posting}>
-                  {posting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.postBtnText}>Post</Text>}
+                  {posting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.postBtnText}>{t('common.post')}</Text>}
                 </TouchableOpacity>
               </View>
             </View>
@@ -480,10 +472,10 @@ const CommunityScreen: React.FC = () => {
       {/* Comments Modal */}
       <Modal visible={showCommentModal} animationType="slide" transparent={false}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' }]}> 
+          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' }]}>
             <View style={[styles.modalBox, { height: '75%', backgroundColor: '#fff' }]}>
               <View style={styles.commentHeader}>
-                <Text style={styles.modalTitle}>Comments</Text>
+                <Text style={styles.modalTitle}>{t('community.comments')}</Text>
                 <TouchableOpacity onPress={() => { setShowCommentModal(false); setCommentText(''); }}>
                   <Feather name="x" size={22} color="#6b7280" />
                 </TouchableOpacity>
@@ -493,40 +485,34 @@ const CommunityScreen: React.FC = () => {
                 keyExtractor={(item) => item.id}
                 keyboardShouldPersistTaps="handled"
                 ListEmptyComponent={
-                  <Text style={[styles.emptyText, { textAlign: 'center', paddingVertical: 24, color: '#111827' }]}>No comments yet. Start the conversation!</Text>
+                  <Text style={[styles.emptyText, { textAlign: 'center', paddingVertical: 24, color: '#111827' }]}>{t('community.noComments')}</Text>
                 }
-                renderItem={({ item: c }) => {
-                  return (
-                    <View style={styles.commentItem}>
-                      <View style={styles.commentAvatar}>
-                        <Text style={styles.commentAvatarText}>{c.userName?.charAt(0).toUpperCase()}</Text>
-                      </View>
-                      <View style={styles.commentBody}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <Text style={styles.commentUser}>{c.userName}</Text>
-                          <Text style={styles.commentTime}>
-                            {(() => {
-                              try {
-                                const date = c.createdAt?.toDate ? c.createdAt.toDate() : new Date(c.createdAt);
-                                return date.toLocaleDateString();
-                              } catch (e) {
-                                console.error('❌ Date parsing error:', e, c.createdAt);
-                                return 'N/A';
-                              }
-                            })()}
-                          </Text>
-                        </View>
-                        <Text style={styles.commentText}>{c.text}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.commentMenuBtn}
-                        onPress={() => openCommentMenu(c)}
-                      >
-                        <MaterialCommunityIcons name="dots-vertical" size={20} color="#6b7280" />
-                      </TouchableOpacity>
+                renderItem={({ item: c }) => (
+                  <View style={styles.commentItem}>
+                    <View style={styles.commentAvatar}>
+                      <Text style={styles.commentAvatarText}>{c.userName?.charAt(0).toUpperCase()}</Text>
                     </View>
-                  );
-                }}
+                    <View style={styles.commentBody}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <Text style={styles.commentUser}>{c.userName}</Text>
+                        <Text style={styles.commentTime}>
+                          {(() => {
+                            try {
+                              const date = c.createdAt?.toDate ? c.createdAt.toDate() : new Date(c.createdAt);
+                              return date.toLocaleDateString();
+                            } catch (e) {
+                              return 'N/A';
+                            }
+                          })()}
+                        </Text>
+                      </View>
+                      <Text style={styles.commentText}>{c.text}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.commentMenuBtn} onPress={() => openCommentMenu(c)}>
+                      <MaterialCommunityIcons name="dots-vertical" size={20} color="#6b7280" />
+                    </TouchableOpacity>
+                  </View>
+                )}
                 style={{ flex: 1, backgroundColor: '#fff' }}
                 contentContainerStyle={{ paddingBottom: 20, minHeight: 120 }}
                 ListFooterComponent={<View style={{ height: 20 }} />}
@@ -535,7 +521,7 @@ const CommunityScreen: React.FC = () => {
               <View style={styles.commentInputRow}>
                 <TextInput
                   style={styles.commentInput}
-                  placeholder="Add a comment..."
+                  placeholder={t('community.addComment')}
                   placeholderTextColor="#9ca3af"
                   value={commentText}
                   onChangeText={setCommentText}
@@ -563,22 +549,19 @@ const CommunityScreen: React.FC = () => {
                 deleteComment(selectedComment.id);
               }}>
                 <MaterialCommunityIcons name="delete-outline" size={20} color="#ef4444" />
-                <Text style={[styles.menuText, { color: '#ef4444' }]}>Delete Comment</Text>
+                <Text style={[styles.menuText, { color: '#ef4444' }]}>{t('community.deleteComment')}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.menuItem} onPress={reportComment}>
                 <MaterialCommunityIcons name="flag-outline" size={20} color="#f97316" />
-                <Text style={[styles.menuText, { color: '#f97316' }]}>Report Comment</Text>
+                <Text style={[styles.menuText, { color: '#f97316' }]}>{t('community.reportComment')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               style={[styles.menuItem, { borderTopWidth: 1, borderTopColor: '#f3f4f6' }]}
-              onPress={() => {
-                setShowCommentActionModal(false);
-                setSelectedComment(null);
-              }}
+              onPress={() => { setShowCommentActionModal(false); setSelectedComment(null); }}
             >
-              <Text style={[styles.menuText, { color: '#6b7280' }]}>Cancel</Text>
+              <Text style={[styles.menuText, { color: '#6b7280' }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -591,18 +574,18 @@ const CommunityScreen: React.FC = () => {
             {selectedPost && selectedPost.userId === user?.uid && (
               <TouchableOpacity style={styles.menuItem} onPress={deletePost}>
                 <MaterialCommunityIcons name="delete-outline" size={20} color="#ef4444" />
-                <Text style={[styles.menuText, { color: '#ef4444' }]}>Delete Post</Text>
+                <Text style={[styles.menuText, { color: '#ef4444' }]}>{t('community.deletePost')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.menuItem} onPress={reportPost}>
               <MaterialCommunityIcons name="flag-outline" size={20} color="#f97316" />
-              <Text style={[styles.menuText, { color: '#f97316' }]}>Report Post</Text>
+              <Text style={[styles.menuText, { color: '#f97316' }]}>{t('community.reportPost')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuItem, { borderTopWidth: 1, borderTopColor: '#f3f4f6' }]}
               onPress={() => setShowMenuModal(false)}
             >
-              <Text style={[styles.menuText, { color: '#6b7280' }]}>Cancel</Text>
+              <Text style={[styles.menuText, { color: '#6b7280' }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>

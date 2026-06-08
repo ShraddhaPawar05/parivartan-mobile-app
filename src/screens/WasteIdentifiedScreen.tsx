@@ -9,11 +9,13 @@ import { useUploadFlow } from '../context/UploadFlowContext';
 import { predictImage } from '../services/aiService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getWasteIcon, getWasteColor } from '../constants/wasteIcons';
+import { useLanguage } from '../context/LanguageContext';
 
 const WasteIdentifiedScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const route: any = useRoute();
   const { setCategory, setImageUrl, setConfidence, resetFlow } = useUploadFlow();
+  const { t } = useLanguage();
   const [showConfidence, setShowConfidence] = useState(false);
   const [predictedCategory, setPredictedCategory] = useState<string | null>(null);
   const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
@@ -74,7 +76,7 @@ const WasteIdentifiedScreen: React.FC = () => {
             resetFlow();
             navigation.navigate('IdentifyStart');
           }} style={styles.back} />
-          <Text style={styles.title}>Waste Identified</Text>
+          <Text style={styles.title}>{t('wasteIdentified.title')}</Text>
           <View style={{width: 36}} />
         </View>
 
@@ -85,8 +87,8 @@ const WasteIdentifiedScreen: React.FC = () => {
             <View style={styles.loadingCircle}>
               <MaterialCommunityIcons name="loading" size={40} color="#10b981" />
             </View>
-            <Text style={styles.loadingTitle}>Analyzing...</Text>
-            <Text style={styles.loadingText}>Our AI is identifying the waste type</Text>
+            <Text style={styles.loadingTitle}>{t('wasteIdentified.analyzing')}</Text>
+            <Text style={styles.loadingText}>{t('wasteIdentified.aiIdentifying')}</Text>
           </View>
         ) : (
           <>
@@ -112,7 +114,7 @@ const WasteIdentifiedScreen: React.FC = () => {
                     color="#065f46" 
                   />
                   <Text style={styles.badgeText}>
-                    {isManualSelection ? 'Manual Selection' : 'High Confidence'}
+                    {isManualSelection ? t('wasteIdentified.manualSelection') : t('wasteIdentified.highConfidence')}
                   </Text>
                 </View>
                 {!isManualSelection && predictionConfidence && (
@@ -127,14 +129,14 @@ const WasteIdentifiedScreen: React.FC = () => {
 
               <Text style={styles.categoryTitle}>
                 {predictedCategory 
-                  ? `${predictedCategory.charAt(0).toUpperCase() + predictedCategory.slice(1)} Waste` 
-                  : 'Unknown Waste'}
+                  ? `${predictedCategory.charAt(0).toUpperCase() + predictedCategory.slice(1)} ${t('requests.waste')}`
+                  : t('wasteIdentified.unknownWaste')}
               </Text>
               
               <Text style={styles.categoryDescription}>
                 {predictedCategory 
-                  ? `This item belongs to the ${predictedCategory} waste category` 
-                  : 'Unable to identify waste category'}
+                  ? t('wasteIdentified.belongsTo', { category: predictedCategory })
+                  : t('wasteIdentified.unableToIdentify')}
               </Text>
 
               {showConfidence && !isManualSelection && predictionConfidence && (
@@ -148,7 +150,7 @@ const WasteIdentifiedScreen: React.FC = () => {
                   </View>
                   <Text style={styles.confidenceText}>{predictionConfidence.toFixed(1)}%</Text>
                   <Text style={styles.confidenceExplanation}>
-                    High confidence means our AI is over 85% certain about this classification
+                    {t('wasteIdentified.highConfidenceExplanation')}
                   </Text>
                 </View>
               )}
@@ -160,7 +162,7 @@ const WasteIdentifiedScreen: React.FC = () => {
                 onPress={() => navigation.navigate('EnterQuantity')} 
                 disabled={!predictedCategory}
               >
-                <Text style={styles.nextButtonText}>Continue</Text>
+                <Text style={styles.nextButtonText}>{t('common.continue')}</Text>
                 <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
               </TouchableOpacity>
 
@@ -169,7 +171,7 @@ const WasteIdentifiedScreen: React.FC = () => {
                 onPress={() => navigation.navigate('IdentifyStart')}
               >
                 <MaterialCommunityIcons name="refresh" size={18} color="#6b7280" />
-                <Text style={styles.changeButtonText}>Change Category</Text>
+                <Text style={styles.changeButtonText}>{t('wasteIdentified.changeCategory')}</Text>
               </TouchableOpacity>
             </View>
           </>

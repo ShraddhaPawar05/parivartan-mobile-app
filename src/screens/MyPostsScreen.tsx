@@ -13,6 +13,7 @@ import {
 import { db } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 import ScreenWrapper from '../components/ScreenWrapper';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Post {
   id: string;
@@ -37,6 +38,7 @@ interface Comment {
 const MyPostsScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const { t } = useLanguage();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -82,10 +84,10 @@ const MyPostsScreen: React.FC = () => {
       await deleteDoc(doc(db, 'communityPosts', postToDelete));
       setShowDeleteModal(false);
       setPostToDelete(null);
-      Alert.alert('Success', 'Post deleted successfully');
+      Alert.alert(t('common.success'), t('community.postDeleted'));
     } catch (error) {
       console.error('Error deleting post:', error);
-      Alert.alert('Error', 'Failed to delete post');
+      Alert.alert(t('common.error'), t('community.postDeleteFailed'));
     }
   };
 
@@ -129,7 +131,7 @@ const MyPostsScreen: React.FC = () => {
       setCommentText('');
     } catch (error) {
       console.error('❌ Error adding comment:', error);
-      Alert.alert('Error', 'Failed to post comment.');
+      Alert.alert(t('common.error'), t('community.commentFailed'));
     } finally {
       setSubmittingComment(false);
     }
@@ -145,7 +147,7 @@ const MyPostsScreen: React.FC = () => {
       <ScreenWrapper>
         <View style={styles.loadingContainer}>
           <ActivityIndicator color="#10b981" size="large" />
-          <Text style={styles.loadingText}>Loading your posts...</Text>
+          <Text style={styles.loadingText}>{t('myPosts.loading')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -158,20 +160,20 @@ const MyPostsScreen: React.FC = () => {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
             <MaterialCommunityIcons name="arrow-left" size={22} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.header}>My Posts</Text>
+          <Text style={styles.header}>{t('myPosts.title')}</Text>
           <View style={{ width: 36 }} />
         </View>
 
         {posts.length === 0 ? (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="post-outline" size={64} color="#d1d5db" />
-            <Text style={styles.emptyTitle}>No posts yet</Text>
-            <Text style={styles.emptySubtitle}>Share your recycling journey with the community!</Text>
+            <Text style={styles.emptyTitle}>{t('myPosts.noPostsYet')}</Text>
+            <Text style={styles.emptySubtitle}>{t('myPosts.noPostsSubtitle')}</Text>
             <TouchableOpacity
               style={styles.createPostBtn}
               onPress={() => navigation.navigate('Community')}
             >
-              <Text style={styles.createPostText}>Create Your First Post</Text>
+              <Text style={styles.createPostText}>{t('myPosts.createFirstPost')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -202,11 +204,11 @@ const MyPostsScreen: React.FC = () => {
               <View style={styles.postStats}>
                 <View style={styles.statItem}>
                   <MaterialCommunityIcons name="heart" size={16} color="#ef4444" />
-                  <Text style={styles.statText}>{post.likes || 0} likes</Text>
+                  <Text style={styles.statText}>{t('myPosts.likes', { count: post.likes || 0 })}</Text>
                 </View>
                 <TouchableOpacity style={styles.statItem} onPress={() => openComments(post.id)}>
                   <MaterialCommunityIcons name="comment-outline" size={16} color="#6b7280" />
-                  <Text style={styles.statText}>{post.commentCount || 0} comments</Text>
+                  <Text style={styles.statText}>{t('myPosts.comments', { count: post.commentCount || 0 })}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -220,7 +222,7 @@ const MyPostsScreen: React.FC = () => {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.commentModalContainer}>
             <View style={styles.commentHeader}>
-              <Text style={styles.commentTitle}>Comments</Text>
+              <Text style={styles.commentTitle}>{t('myPosts.comments_title')}</Text>
               <TouchableOpacity onPress={() => setShowCommentModal(false)}>
                 <MaterialCommunityIcons name="close" size={24} color="#111827" />
               </TouchableOpacity>
@@ -228,7 +230,7 @@ const MyPostsScreen: React.FC = () => {
             <FlatList
               data={comments}
               keyExtractor={(item) => item.id}
-              ListEmptyComponent={<Text style={[styles.emptyText, { textAlign: 'center', paddingVertical: 24, color: '#111827' }]}>No comments yet. Be the first to reply.</Text>}
+              ListEmptyComponent={<Text style={[styles.emptyText, { textAlign: 'center', paddingVertical: 24, color: '#111827' }]}>{t('myPosts.noCommentsYet')}</Text>}
               renderItem={({ item }) => (
                 <View style={styles.commentItem}>
                   <View style={styles.commentAvatar}>
@@ -268,14 +270,14 @@ const MyPostsScreen: React.FC = () => {
       <Modal visible={showDeleteModal} transparent animationType="fade">
         <View style={styles.actionOverlay}>
           <View style={styles.actionBox}>
-            <Text style={styles.actionTitle}>Delete Post</Text>
-            <Text style={styles.actionMessage}>This post will be permanently removed. Do you want to continue?</Text>
+            <Text style={styles.actionTitle}>{t('myPosts.deletePost')}</Text>
+            <Text style={styles.actionMessage}>{t('myPosts.deletePostMessage')}</Text>
             <View style={styles.actionButtons}>
               <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={() => setShowDeleteModal(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={styles.cancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={deletePost}>
-                <Text style={styles.deleteText}>Delete</Text>
+                <Text style={styles.deleteText}>{t('common.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>

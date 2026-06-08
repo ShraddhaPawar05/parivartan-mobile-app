@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Modal } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useRequests } from '../context';
 import { useAuth } from '../context/AuthContext';
@@ -8,12 +8,15 @@ import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage, LANGUAGES, Language } from '../context/LanguageContext';
 
 const ProfileScreen: React.FC = () => {
   const { redeemed } = useRequests();
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const [isDark, setIsDark] = React.useState(false);
+  const [showLangModal, setShowLangModal] = React.useState(false);
   const [fullName, setFullName] = React.useState<string>('');
   const [email, setEmail] = React.useState<string>('');
   const [ecoPoints, setEcoPoints] = React.useState<number>(0);
@@ -103,7 +106,7 @@ const ProfileScreen: React.FC = () => {
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
       </View>
 
       {/* User Card */}
@@ -125,29 +128,29 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.statCard}>
           <MaterialCommunityIcons name="recycle" size={28} color="#10b981" />
           <Text style={styles.statValue}>{totalRequests}</Text>
-          <Text style={styles.statLabel}>Total Requests</Text>
+          <Text style={styles.statLabel}>{t('profile.totalRequests')}</Text>
         </View>
         <View style={styles.statCard}>
           <MaterialCommunityIcons name="check-circle" size={28} color="#3b82f6" />
           <Text style={styles.statValue}>{completedRequests}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
+          <Text style={styles.statLabel}>{t('profile.completed')}</Text>
         </View>
         <View style={styles.statCard}>
           <MaterialCommunityIcons name="weight-kilogram" size={28} color="#f59e0b" />
           <Text style={styles.statValue}>{totalKg.toFixed(1)}</Text>
-          <Text style={styles.statLabel}>kg Recycled</Text>
+          <Text style={styles.statLabel}>{t('profile.kgRecycled')}</Text>
         </View>
       </View>
 
       {/* Account Section */}
-      <Text style={styles.sectionTitle}>Account Settings</Text>
+      <Text style={styles.sectionTitle}>{t('profile.accountSettings')}</Text>
       
       <TouchableOpacity style={styles.menuItem} onPress={() => (navigation as any).navigate('Home', { screen: 'EditProfile' })}>
         <View style={styles.menuLeft}>
           <View style={[styles.menuIcon, {backgroundColor: '#dbeafe'}]}>
             <MaterialCommunityIcons name="account-edit" size={20} color="#1e40af" />
           </View>
-          <Text style={styles.menuText}>Edit Profile</Text>
+          <Text style={styles.menuText}>{t('profile.editProfile')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
       </TouchableOpacity>
@@ -157,7 +160,7 @@ const ProfileScreen: React.FC = () => {
           <View style={[styles.menuIcon, {backgroundColor: '#fef3c7'}]}>
             <MaterialCommunityIcons name="gift" size={20} color="#92400e" />
           </View>
-          <Text style={styles.menuText}>Rewards</Text>
+          <Text style={styles.menuText}>{t('profile.rewards')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
       </TouchableOpacity>
@@ -167,7 +170,7 @@ const ProfileScreen: React.FC = () => {
           <View style={[styles.menuIcon, {backgroundColor: '#ecfdf5'}]}>
             <MaterialCommunityIcons name="chart-line" size={20} color="#059669" />
           </View>
-          <Text style={styles.menuText}>My Impact</Text>
+          <Text style={styles.menuText}>{t('profile.myImpact')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
       </TouchableOpacity>
@@ -176,18 +179,18 @@ const ProfileScreen: React.FC = () => {
       <View style={styles.locationCard}>
         <View style={styles.locationHeader}>
           <MaterialCommunityIcons name="map-marker" size={20} color="#10b981" />
-          <Text style={styles.locationTitle}>Pickup Location</Text>
+          <Text style={styles.locationTitle}>{t('profile.pickupLocation')}</Text>
         </View>
         <Text style={styles.locationText}>
-          {location ? `${location.house}, ${location.street}, ${location.city} - ${location.pincode}` : 'Not set'}
+          {location ? `${location.house}, ${location.street}, ${location.city} - ${location.pincode}` : t('profile.locationNotSet')}
         </Text>
         <TouchableOpacity style={styles.editLocationBtn} onPress={() => (navigation as any).navigate('Home', { screen: 'LocationSetup' })}>
-          <Text style={styles.editLocationText}>Edit Location</Text>
+          <Text style={styles.editLocationText}>{t('profile.editLocation')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Preferences */}
-      <Text style={styles.sectionTitle}>Preferences</Text>
+      <Text style={styles.sectionTitle}>{t('profile.preferences')}</Text>
       
       <View style={styles.themeCard}>
         <View style={styles.themeLeft}>
@@ -195,8 +198,8 @@ const ProfileScreen: React.FC = () => {
             <MaterialCommunityIcons name={isDark ? "moon-waning-crescent" : "white-balance-sunny"} size={20} color="#374151" />
           </View>
           <View>
-            <Text style={styles.menuText}>Theme</Text>
-            <Text style={styles.themeSubtext}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
+            <Text style={styles.menuText}>{t('profile.theme')}</Text>
+            <Text style={styles.themeSubtext}>{isDark ? t('profile.darkMode') : t('profile.lightMode')}</Text>
           </View>
         </View>
         <Switch value={isDark} onValueChange={setIsDark} trackColor={{true: '#10b981', false: '#d1d5db'}} />
@@ -205,7 +208,7 @@ const ProfileScreen: React.FC = () => {
       {/* Recently Redeemed */}
       {redeemed && redeemed.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Recently Redeemed</Text>
+          <Text style={styles.sectionTitle}>{t('profile.recentlyRedeemed')}</Text>
           {redeemed.map(r => (
             <View key={r.id} style={styles.redeemCard}>
               <MaterialCommunityIcons name="gift" size={24} color="#10b981" />
@@ -218,14 +221,52 @@ const ProfileScreen: React.FC = () => {
         </>
       )}
 
+      {/* Language Selector */}
+      <TouchableOpacity style={[styles.menuItem, {marginBottom: 0}]} onPress={() => setShowLangModal(true)}>
+        <View style={styles.menuLeft}>
+          <View style={[styles.menuIcon, {backgroundColor: '#ecfdf5'}]}>
+            <MaterialCommunityIcons name="translate" size={20} color="#10b981" />
+          </View>
+          <View>
+            <Text style={styles.menuText}>{t('profile.language')}</Text>
+            <Text style={styles.themeSubtext}>{LANGUAGES.find(l => l.code === language)?.nativeLabel}</Text>
+          </View>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
+      </TouchableOpacity>
+
       {/* Logout */}
       <TouchableOpacity onPress={async () => { await signOut(); }} style={styles.logoutBtn}>
         <MaterialCommunityIcons name="logout" size={20} color="#ef4444" />
-        <Text style={styles.logoutText}>Log Out</Text>
+        <Text style={styles.logoutText}>{t('profile.logout')}</Text>
       </TouchableOpacity>
 
       <View style={{height: 100}} />
     </ScrollView>
+
+    {/* Language Modal */}
+    <Modal visible={showLangModal} transparent animationType="fade" onRequestClose={() => setShowLangModal(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalBox}>
+          <Text style={styles.modalTitle}>{t('profile.selectLanguage')}</Text>
+          <Text style={styles.modalSubtext}>{t('profile.languageSubtext')}</Text>
+          {LANGUAGES.map(lang => (
+            <TouchableOpacity
+              key={lang.code}
+              style={[styles.langOption, language === lang.code && styles.langOptionActive]}
+              onPress={() => { setLanguage(lang.code as Language); setShowLangModal(false); }}
+            >
+              <Text style={[styles.langLabel, language === lang.code && styles.langLabelActive]}>{lang.nativeLabel}</Text>
+              <Text style={styles.langSublabel}>{lang.label}</Text>
+              {language === lang.code && <MaterialCommunityIcons name="check-circle" size={20} color="#10b981" />}
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowLangModal(false)}>
+            <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   </ScreenWrapper>
 );
 };
@@ -270,8 +311,19 @@ const styles = StyleSheet.create({
   redeemTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
   redeemDate: { fontSize: 12, color: '#6b7280', marginTop: 4 },
 
-  logoutBtn: { backgroundColor: '#fff', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 24, borderWidth: 1, borderColor: '#fee2e2', gap: 8 },
-  logoutText: { fontSize: 15, fontWeight: '800', color: '#ef4444' }
+  logoutBtn: { backgroundColor: '#fff', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10, borderWidth: 1, borderColor: '#fee2e2', gap: 8 },
+  logoutText: { fontSize: 15, fontWeight: '800', color: '#ef4444' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  modalBox: { backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%' },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 4 },
+  modalSubtext: { fontSize: 13, color: '#6b7280', marginBottom: 16 },
+  langOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: 'transparent' },
+  langOptionActive: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
+  langLabel: { fontSize: 16, fontWeight: '700', color: '#111827', flex: 1 },
+  langLabelActive: { color: '#10b981' },
+  langSublabel: { fontSize: 12, color: '#9ca3af', marginRight: 8 },
+  modalCancelBtn: { paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  modalCancelText: { fontSize: 15, fontWeight: '700', color: '#6b7280' },
 });
 
 export default ProfileScreen;

@@ -9,6 +9,7 @@ import { getWasteIcon } from '../constants/wasteIcons';
 import { useUploadFlow } from '../context/UploadFlowContext';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage } from '../context/LanguageContext';
 
 const categories = ['Plastic', 'Paper', 'Metal', 'Clothes', 'Cardboard', 'Glass'];
 
@@ -16,6 +17,7 @@ const IdentifyScreen: React.FC = () => {
   const navigation: any = useNavigation();
   const route: any = useRoute();
   const { setCategory, setImageUrl, resetFlow } = useUploadFlow();
+  const { t } = useLanguage();
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
 
@@ -29,7 +31,7 @@ const IdentifyScreen: React.FC = () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        alert('Camera permission is required');
+        alert(t('identify.cameraPermission'));
         return;
       }
 
@@ -48,7 +50,7 @@ const IdentifyScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      alert('Failed to take photo');
+      alert(t('identify.failedPhoto'));
     }
   };
 
@@ -57,7 +59,7 @@ const IdentifyScreen: React.FC = () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert('Gallery permission is required');
+        alert(t('identify.galleryPermission'));
         return;
       }
 
@@ -76,7 +78,7 @@ const IdentifyScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error selecting image:', error);
-      alert('Failed to select image');
+      alert(t('identify.failedGallery'));
     }
   };
 
@@ -96,7 +98,7 @@ const IdentifyScreen: React.FC = () => {
             resetFlow();
             navigation.getParent()?.navigate('Home');
           }} style={styles.backButton} />
-          <Text style={styles.title}>Identify Waste</Text>
+          <Text style={styles.title}>{t('identify.title')}</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -113,11 +115,11 @@ const IdentifyScreen: React.FC = () => {
             </View>
             <View style={styles.scanPulse} />
           </TouchableOpacity>
-          <Text style={styles.scanTitle}>Scan to Identify</Text>
+          <Text style={styles.scanTitle}>{t('identify.scanToIdentify')}</Text>
           <Text style={styles.scanSubtitle}>Point your camera at the waste item</Text>
           <View style={styles.scanBadge}>
             <MaterialCommunityIcons name="lightning-bolt" size={14} color="#f59e0b" />
-            <Text style={styles.scanBadgeText}>AI Powered</Text>
+            <Text style={styles.scanBadgeText}>{t('identify.aiPowered')}</Text>
           </View>
         </LinearGradient>
 
@@ -128,7 +130,7 @@ const IdentifyScreen: React.FC = () => {
         </View>
 
         <View style={styles.manualSection}>
-          <Text style={styles.sectionTitle}>Select Category Manually</Text>
+          <Text style={styles.sectionTitle}>{t('identify.selectManually')}</Text>
           <Text style={styles.sectionSubtitle}>Choose if you already know the waste type</Text>
         </View>
 
@@ -180,7 +182,7 @@ const IdentifyScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Add Photo</Text>
+            <Text style={styles.modalTitle}>{t('identify.addPhoto')}</Text>
             <Text style={styles.modalSubtitle}>Please add a photo of the {selectedCategory.toLowerCase()} waste</Text>
             
             <TouchableOpacity style={styles.modalButton} onPress={handleTakePhoto}>
@@ -188,7 +190,7 @@ const IdentifyScreen: React.FC = () => {
                 <MaterialCommunityIcons name="camera" size={24} color="#10b981" />
               </View>
               <View style={{flex: 1}}>
-                <Text style={styles.modalButtonText}>Take Photo</Text>
+                <Text style={styles.modalButtonText}>{t('identify.takePhoto')}</Text>
                 <Text style={styles.modalButtonSubtext}>Use your camera</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -199,7 +201,7 @@ const IdentifyScreen: React.FC = () => {
                 <MaterialCommunityIcons name="image" size={24} color="#3b82f6" />
               </View>
               <View style={{flex: 1}}>
-                <Text style={styles.modalButtonText}>Choose from Gallery</Text>
+                <Text style={styles.modalButtonText}>{t('identify.chooseGallery')}</Text>
                 <Text style={styles.modalButtonSubtext}>Select existing photo</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -209,7 +211,7 @@ const IdentifyScreen: React.FC = () => {
               style={styles.modalCancelButton} 
               onPress={() => setShowPhotoModal(false)}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>

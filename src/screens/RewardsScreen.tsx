@@ -5,6 +5,7 @@ import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, 
 import Confetti from '../components/Confetti';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { RewardTransaction, subscribeToVouchers, subscribeToRewardHistory, Voucher } from '../services/rewardsService';
 import { doc, onSnapshot, updateDoc, increment, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
@@ -22,6 +23,7 @@ const getVoucherIcon = (category: string): string =>
 
 const RewardsScreen: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [points, setPoints] = useState(0);
   const [rewardHistory, setRewardHistory] = useState<RewardTransaction[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -120,14 +122,14 @@ const RewardsScreen: React.FC = () => {
   return (
     <ScreenWrapper>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>My Rewards</Text>
+        <Text style={styles.pageTitle}>{t('rewards.title')}</Text>
 
         {/* Hero Card */}
         <LinearGradient colors={['#16a34a', '#10b981']} style={styles.heroCard} start={[0, 0]} end={[1, 1]}>
           <View style={styles.heroTop}>
             <View>
-              <Text style={styles.heroLabel}>🎉 You're close to your next reward!</Text>
-              <Animated.Text style={styles.heroPoints}>{displayPoints.toLocaleString()} EcoPoints</Animated.Text>
+              <Text style={styles.heroLabel}>{t('rewards.closeToNext')}</Text>
+              <Animated.Text style={styles.heroPoints}>{displayPoints.toLocaleString()} {t('profile.ecoPoints')}</Animated.Text>
             </View>
             <View style={styles.heroBadge}>
               <MaterialCommunityIcons name="leaf" size={22} color="#16a34a" />
@@ -137,8 +139,8 @@ const RewardsScreen: React.FC = () => {
           {nextVoucher && (
             <View style={styles.heroProgress}>
               <View style={styles.heroProgressRow}>
-                <Text style={styles.heroProgressLabel}>Unlock next reward at {nextVoucher.pointsRequired} pts</Text>
-                <Text style={styles.heroProgressRemaining}>{remaining} pts to go</Text>
+                <Text style={styles.heroProgressLabel}>{t('rewards.unlockNext', { points: nextVoucher.pointsRequired })}</Text>
+                <Text style={styles.heroProgressRemaining}>{t('rewards.ptsToGo', { remaining })}</Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
@@ -148,13 +150,13 @@ const RewardsScreen: React.FC = () => {
         </LinearGradient>
 
         {/* Vouchers */}
-        <Text style={styles.sectionTitle}>Available Vouchers</Text>
+        <Text style={styles.sectionTitle}>{t('rewards.availableVouchers')}</Text>
         <View style={{ marginTop: 10 }}>
           {vouchers.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialCommunityIcons name="gift-outline" size={48} color="#d1d5db" />
-              <Text style={styles.emptyText}>No vouchers available</Text>
-              <Text style={styles.emptySubText}>Check back soon for exciting vouchers!</Text>
+              <Text style={styles.emptyText}>{t('rewards.noVouchers')}</Text>
+              <Text style={styles.emptySubText}>{t('rewards.noVouchersSubtext')}</Text>
             </View>
           ) : (
             sortedVouchers.map(item => {
@@ -184,14 +186,14 @@ const RewardsScreen: React.FC = () => {
                   <View style={styles.voucherAction}>
                     {isAvailable ? (
                       <>
-                        <Text style={styles.availableLabel}>Available</Text>
+                        <Text style={styles.availableLabel}>{t('rewards.available')}</Text>
                         <TouchableOpacity style={styles.redeemBtn} onPress={() => openSheet(item)} activeOpacity={0.85}>
-                          <Text style={styles.redeemBtnText}>Redeem</Text>
+                          <Text style={styles.redeemBtnText}>{t('rewards.redeem')}</Text>
                         </TouchableOpacity>
                       </>
                     ) : (
                       <>
-                        <Text style={styles.lockedLabel}>Locked</Text>
+                        <Text style={styles.lockedLabel}>{t('rewards.locked')}</Text>
                         <View style={styles.lockIconWrap}>
                           <MaterialCommunityIcons name="lock" size={16} color="#9ca3af" />
                         </View>
@@ -206,7 +208,7 @@ const RewardsScreen: React.FC = () => {
 
         {/* Redemption History */}
         <View style={styles.historySectionHeader}>
-          <Text style={styles.sectionTitle}>Redemption History</Text>
+          <Text style={styles.sectionTitle}>{t('rewards.redemptionHistory')}</Text>
           {rewardHistory.length > 0 && (
             <View style={styles.historyCountBadge}>
               <Text style={styles.historyCountText}>{rewardHistory.length}</Text>
@@ -219,8 +221,8 @@ const RewardsScreen: React.FC = () => {
               <View style={styles.historyEmptyIconWrap}>
                 <MaterialCommunityIcons name="receipt" size={28} color="#10b981" />
               </View>
-              <Text style={styles.historyEmptyText}>No redemptions yet</Text>
-              <Text style={styles.historyEmptySubText}>Redeemed vouchers will appear here</Text>
+              <Text style={styles.historyEmptyText}>{t('rewards.noRedemptions')}</Text>
+              <Text style={styles.historyEmptySubText}>{t('rewards.noRedemptionsSubtext')}</Text>
             </View>
           ) : (
             rewardHistory.slice(0, 5).map((r, index) => (
@@ -241,7 +243,7 @@ const RewardsScreen: React.FC = () => {
                   <Text style={styles.historyPts}>-{r.pointsSpent} pts</Text>
                   <View style={styles.redeemedBadge}>
                     <MaterialCommunityIcons name="check-circle" size={10} color="#059669" />
-                    <Text style={styles.redeemedBadgeText}>Redeemed</Text>
+                    <Text style={styles.redeemedBadgeText}>{t('rewards.redeemed')}</Text>
                   </View>
                 </View>
               </View>
@@ -278,23 +280,23 @@ const RewardsScreen: React.FC = () => {
 
                   <View style={styles.sheetInfoRow}>
                     <View style={styles.sheetInfoBox}>
-                      <Text style={styles.sheetInfoLabel}>Cost</Text>
+                      <Text style={styles.sheetInfoLabel}>{t('rewards.cost')}</Text>
                       <Text style={styles.sheetInfoValue}>{selectedVoucher.pointsRequired} pts</Text>
                     </View>
                     <View style={[styles.sheetInfoBox, { backgroundColor: '#ecfdf5' }]}>
-                      <Text style={styles.sheetInfoLabel}>You have</Text>
+                      <Text style={styles.sheetInfoLabel}>{t('rewards.youHave')}</Text>
                       <Text style={[styles.sheetInfoValue, { color: '#10b981' }]}>{points} pts</Text>
                     </View>
                   </View>
 
                   <View style={styles.sheetActions}>
                     <TouchableOpacity style={styles.sheetCancelBtn} onPress={closeSheet} disabled={redeeming}>
-                      <Text style={styles.sheetCancelText}>Cancel</Text>
+                      <Text style={styles.sheetCancelText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.sheetConfirmBtn} onPress={handleRedeem} disabled={redeeming} activeOpacity={0.85}>
                       {redeeming
                         ? <ActivityIndicator color="#fff" size="small" />
-                        : <Text style={styles.sheetConfirmText}>Confirm Redeem</Text>
+                        : <Text style={styles.sheetConfirmText}>{t('rewards.confirmRedeem')}</Text>
                       }
                     </TouchableOpacity>
                   </View>

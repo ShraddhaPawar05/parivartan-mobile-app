@@ -10,6 +10,7 @@ import { collection, query, where, onSnapshot, writeBatch, doc, updateDoc, serve
 import { db } from '../firebase/firebase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type Notification = {
   id: string;
@@ -42,13 +43,14 @@ function getNotificationIcon(message: string, type: string) {
 const NotificationsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [responding, setResponding] = useState<string | null>(null); // notificationId being responded to
+  const [responding, setResponding] = useState<string | null>(null);
 
   const handleAvailabilityResponse = async (item: Notification, response: 'confirmed' | 'declined') => {
     setResponding(item.id);
@@ -105,22 +107,17 @@ const NotificationsScreen: React.FC = () => {
   };
 
   const handleCardLongPress = (id: string) => {
-    if (!selectMode) {
-      setSelectMode(true);
-      setSelectedIds(new Set([id]));
-    }
+    if (!selectMode) { setSelectMode(true); setSelectedIds(new Set([id])); }
   };
 
   const allSelected = selectedIds.size === notifications.length;
   const selectAll = () => setSelectedIds(new Set(notifications.map(n => n.id)));
   const deselectAll = () => setSelectedIds(new Set());
-
   const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); };
 
   const handleDelete = async () => {
     setDeleting(true);
     const batch = writeBatch(db);
-    // If in select mode delete selected, else delete all (Clear All)
     const toDelete = selectMode && selectedIds.size > 0
       ? selectedIds
       : new Set(notifications.map(n => n.id));
@@ -132,12 +129,13 @@ const NotificationsScreen: React.FC = () => {
   };
 
   const confirmMessage = selectMode && selectedIds.size > 0 && selectedIds.size < notifications.length
-    ? `This will permanently delete ${selectedIds.size} selected notification${selectedIds.size > 1 ? 's' : ''}.`
-    : 'This will permanently delete all your notifications.';
+    ? (selectedIds.size === 1
+        ? t('notifications.deleteSelectedMessage', { count: selectedIds.size })
+        : t('notifications.deleteSelectedMessagePlural', { count: selectedIds.size }))
+    : t('notifications.deleteAllMessage');
 
   return (
     <ScreenWrapper>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => selectMode ? exitSelectMode() : navigation.goBack()}
@@ -147,14 +145,14 @@ const NotificationsScreen: React.FC = () => {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
-          {selectMode ? `${selectedIds.size} selected` : 'Notifications'}
+          {selectMode ? t('notifications.selected', { count: selectedIds.size }) : t('notifications.title')}
         </Text>
 
         <View style={styles.headerActions}>
           {selectMode ? (
             <>
               <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} style={styles.headerTextBtn}>
-                <Text style={styles.headerTextBtnLabel}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+                <Text style={styles.headerTextBtnLabel}>{allSelected ? t('notifications.deselectAll') : t('notifications.selectAll')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.deleteIconBtn} onPress={() => setShowConfirm(true)}>
                 <MaterialCommunityIcons name="trash-can-outline" size={22} color="#ef4444" />
@@ -162,7 +160,7 @@ const NotificationsScreen: React.FC = () => {
             </>
           ) : notifications.length > 0 ? (
             <TouchableOpacity style={styles.clearBtn} onPress={() => setShowConfirm(true)}>
-              <Text style={styles.clearText}>Clear All</Text>
+              <Text style={styles.clearText}>{t('notifications.clearAll')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -171,7 +169,7 @@ const NotificationsScreen: React.FC = () => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+          <Text style={styles.loadingText}>{t('notifications.loading')}</Text>
         </View>
       ) : (
         <FlatList
@@ -185,47 +183,42 @@ const NotificationsScreen: React.FC = () => {
                 const isResponding = responding === item.id;
                 return (
                   <View key={item.id} style={styles.availCard}>
-
-                    {/* Header */}
-                    <LinearGradient colors={['#10b981', '#059669']} style={styles.availHeader} start={[0,0]} end={[1,0]}>
+                    <LinearGradient colors={['#10b981', '#059669']} style={styles.availHeader} start={[0, 0]} end={[1, 0]}>
                       <View style={styles.availHeaderLeft}>
                         <View style={styles.availIconWrap}>
                           <MaterialCommunityIcons name="calendar-clock" size={22} color="#059669" />
                         </View>
                         <View>
-                          <Text style={styles.availHeaderTitle}>{item.title || 'Pickup Confirmation'}</Text>
+                          <Text style={styles.availHeaderTitle}>{item.title || t('notifications.pickupConfirmation')}</Text>
                           <Text style={styles.availHeaderSub}>
-                            {responded ? 'You have responded' : 'Your response is needed'}
+                            {responded ? t('notifications.responded') : t('notifications.responseNeeded')}
                           </Text>
                         </View>
                       </View>
                     </LinearGradient>
 
-                    {/* Body */}
                     <View style={styles.availBody}>
                       <Text style={styles.availMessage}>{item.message}</Text>
 
-                      {/* Date / Time boxes */}
                       {(item.metadata?.pickupDate || item.metadata?.pickupTime) && (
                         <View style={styles.availInfoRow}>
                           {item.metadata?.pickupDate && (
                             <View style={styles.availInfoBox}>
                               <MaterialCommunityIcons name="calendar" size={18} color="#10b981" />
-                              <Text style={styles.availInfoLabel}>DATE</Text>
+                              <Text style={styles.availInfoLabel}>{t('notifications.dateLabel')}</Text>
                               <Text style={styles.availInfoValue}>{item.metadata.pickupDate}</Text>
                             </View>
                           )}
                           {item.metadata?.pickupTime && (
                             <View style={styles.availInfoBox}>
                               <MaterialCommunityIcons name="clock-outline" size={18} color="#10b981" />
-                              <Text style={styles.availInfoLabel}>TIME</Text>
+                              <Text style={styles.availInfoLabel}>{t('notifications.timeLabel')}</Text>
                               <Text style={styles.availInfoValue}>{item.metadata.pickupTime}</Text>
                             </View>
                           )}
                         </View>
                       )}
 
-                      {/* Buttons or responded state */}
                       {responded ? (
                         <View style={[
                           styles.respondedBox,
@@ -237,7 +230,7 @@ const NotificationsScreen: React.FC = () => {
                             color={item.status === 'confirmed' ? '#10b981' : '#ef4444'}
                           />
                           <Text style={[styles.respondedBoxText, { color: item.status === 'confirmed' ? '#065f46' : '#991b1b' }]}>
-                            {item.status === 'confirmed' ? 'You confirmed availability' : 'You marked as not available'}
+                            {item.status === 'confirmed' ? t('notifications.confirmed') : t('notifications.declined')}
                           </Text>
                         </View>
                       ) : (
@@ -252,7 +245,7 @@ const NotificationsScreen: React.FC = () => {
                               ? <ActivityIndicator size="small" color="#fff" />
                               : <>
                                   <MaterialCommunityIcons name="check-circle" size={20} color="#fff" />
-                                  <Text style={styles.availYesText}>Yes, I'm Available</Text>
+                                  <Text style={styles.availYesText}>{t('notifications.yesAvailable')}</Text>
                                 </>
                             }
                           </TouchableOpacity>
@@ -263,7 +256,7 @@ const NotificationsScreen: React.FC = () => {
                             activeOpacity={0.85}
                           >
                             <MaterialCommunityIcons name="close-circle" size={20} color="#6b7280" />
-                            <Text style={styles.availNoText}>Not Available</Text>
+                            <Text style={styles.availNoText}>{t('notifications.notAvailable')}</Text>
                           </TouchableOpacity>
                         </View>
                       )}
@@ -280,8 +273,8 @@ const NotificationsScreen: React.FC = () => {
                 <View style={styles.emptyIconCircle}>
                   <Feather name="bell-off" size={48} color="#d1d5db" />
                 </View>
-                <Text style={styles.emptyText}>No notifications yet</Text>
-                <Text style={styles.emptySubtext}>We'll notify you when something happens</Text>
+                <Text style={styles.emptyText}>{t('notifications.noNotifications')}</Text>
+                <Text style={styles.emptySubtext}>{t('notifications.noNotificationsSubtext')}</Text>
               </View>
             ) : null
           }
@@ -289,7 +282,7 @@ const NotificationsScreen: React.FC = () => {
             const iconData = getNotificationIcon(item.message, item.type);
             const timestamp = item.createdAt?.toDate?.()
               ? item.createdAt.toDate().toLocaleString()
-              : 'Just now';
+              : t('common.justNow');
             const isSelected = selectedIds.has(item.id);
             return (
               <TouchableOpacity
@@ -319,23 +312,22 @@ const NotificationsScreen: React.FC = () => {
         />
       )}
 
-      {/* Confirmation Modal */}
       <Modal visible={showConfirm} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.modalIconWrap}>
               <MaterialCommunityIcons name="trash-can-outline" size={32} color="#ef4444" />
             </View>
-            <Text style={styles.modalTitle}>Delete Notifications</Text>
-            <Text style={styles.modalMessage}>{confirmMessage} This cannot be undone.</Text>
+            <Text style={styles.modalTitle}>{t('notifications.deleteTitle')}</Text>
+            <Text style={styles.modalMessage}>{confirmMessage} {t('notifications.cannotUndo')}</Text>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowConfirm(false)} disabled={deleting}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalDeleteBtn} onPress={handleDelete} disabled={deleting}>
                 {deleting
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.modalDeleteText}>Delete</Text>
+                  : <Text style={styles.modalDeleteText}>{t('common.delete')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -356,14 +348,10 @@ const styles = StyleSheet.create({
   deleteIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fef2f2', alignItems: 'center', justifyContent: 'center' },
   clearBtn: { paddingHorizontal: 12, paddingVertical: 7, backgroundColor: '#f3f4f6', borderRadius: 10 },
   clearText: { color: '#6b7280', fontWeight: '700', fontSize: 13 },
-
   list: { padding: 16 },
   emptyList: { flex: 1 },
-
   notificationCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2, borderWidth: 1.5, borderColor: 'transparent' },
   notificationCardSelected: { borderColor: '#ef4444', backgroundColor: '#fff8f8' },
-
-  // Availability confirmation card
   availCard: { backgroundColor: '#fff', borderRadius: 20, marginBottom: 16, overflow: 'hidden', shadowColor: '#10b981', shadowOpacity: 0.12, shadowRadius: 12, elevation: 4 },
   availHeader: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   availHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -385,24 +373,19 @@ const styles = StyleSheet.create({
   respondedBoxGreen: { backgroundColor: '#ecfdf5' },
   respondedBoxRed: { backgroundColor: '#f3f4f6' },
   respondedBoxText: { fontSize: 14, fontWeight: '700', flex: 1 },
-
   checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#d1d5db', alignItems: 'center', justifyContent: 'center', marginRight: 10, backgroundColor: '#fff' },
   checkboxSelected: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-
   iconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   notificationContent: { flex: 1 },
   notificationTitle: { fontSize: 12, fontWeight: '800', color: '#111827', marginBottom: 3, letterSpacing: 0.3 },
   notificationMessage: { fontSize: 13, color: '#374151', marginBottom: 5, lineHeight: 18 },
   notificationTime: { fontSize: 11, color: '#9ca3af' },
-
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   emptyIconCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#f9fafb', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyText: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
-
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, color: '#6b7280' },
-
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   modalBox: { backgroundColor: '#fff', borderRadius: 24, padding: 28, width: '100%', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
   modalIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#fef2f2', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
