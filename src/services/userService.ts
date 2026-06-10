@@ -36,9 +36,8 @@ export const createUserProfile = async (
       location: null,
       ecoPoints: 0,
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
     };
-    
     await setDoc(userRef, userProfile);
     console.log('User profile created successfully');
   } catch (error) {
@@ -53,7 +52,6 @@ export const createUserProfileIfNotExists = async (
   try {
     const userRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userRef);
-    
     if (!userDoc.exists()) {
       const userProfile: UserProfile = {
         uid,
@@ -63,9 +61,8 @@ export const createUserProfileIfNotExists = async (
         location: null,
         ecoPoints: 0,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       };
-      
       await setDoc(userRef, userProfile);
       console.log('User profile created for existing user');
     }
@@ -74,10 +71,6 @@ export const createUserProfileIfNotExists = async (
   }
 };
 
-/**
- * Creates a Firestore profile for Google Sign-In users.
- * If the user already exists, only updatedAt is refreshed — no overwrite.
- */
 export const upsertGoogleUserProfile = async (
   uid: string,
   fullName: string,
@@ -86,7 +79,6 @@ export const upsertGoogleUserProfile = async (
   try {
     const userRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userRef);
-
     if (!userDoc.exists()) {
       const userProfile: UserProfile = {
         uid,
@@ -100,7 +92,6 @@ export const upsertGoogleUserProfile = async (
       };
       await setDoc(userRef, userProfile);
     } else {
-      // User exists — just refresh updatedAt, don't overwrite their data
       await updateDoc(userRef, { updatedAt: serverTimestamp() });
     }
   } catch (error) {
@@ -114,12 +105,9 @@ export const updateUserLocation = async (
 ): Promise<void> => {
   try {
     const userRef = doc(db, 'users', uid);
-    
-    // Check if user document exists
     const userDoc = await getDoc(userRef);
-    
+
     if (!userDoc.exists()) {
-      // Create user document if it doesn't exist
       console.log('User document does not exist, creating it...');
       const userProfile: UserProfile = {
         uid,
@@ -130,21 +118,31 @@ export const updateUserLocation = async (
         ecoPoints: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        onboardingComplete: true
-      };
+        onboardingComplete: true,
+      } as any;
       await setDoc(userRef, userProfile);
       console.log('User profile created with location');
     } else {
-      // Update existing document
       await updateDoc(userRef, {
         location,
         onboardingComplete: true,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
       console.log('User location updated successfully in Firestore');
     }
   } catch (error) {
     console.error('Error updating user location:', error);
     throw error;
+  }
+};
+
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (!userDoc.exists()) return null;
+    return { uid, ...userDoc.data() } as UserProfile;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
   }
 };

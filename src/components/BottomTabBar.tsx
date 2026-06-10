@@ -3,6 +3,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
+import FloatingAIButton from './FloatingAIButton';
 
 const TAB_HEIGHT = 70;
 const CENTER_SIZE = 64;
@@ -20,6 +21,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
 
   return (
     <View style={styles.container} pointerEvents="box-none">
+      <FloatingAIButton />
       <View style={styles.bg} />
 
       <View style={styles.row}>

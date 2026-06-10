@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +17,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { auth } from '../firebase/firebase';
+import { handleGoogleResponse, useGoogleAuth } from '../services/googleAuthService';
 import { createUserProfile } from '../services/userService';
 
 const SignUpScreen: React.FC = () => {
@@ -26,13 +28,26 @@ const SignUpScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const { request, response, promptAsync } = useGoogleAuth();
 
   const passwordsMatch = password.length > 0 && password === confirmPassword;
   const basicEmailValid = email.includes('@');
   const phoneValid = phone.trim().length === 10 && /^\d{10}$/.test(phone.trim());
   const canCreate = name.trim() && phoneValid && email.trim() && password && confirmPassword && passwordsMatch && basicEmailValid;
+
+  useEffect(() => {
+    if (!response) return;
+    setGoogleLoading(true);
+    handleGoogleResponse(response).then(({ success, error }) => {
+      setGoogleLoading(false);
+      if (!success && error && error !== 'cancelled') {
+        Alert.alert('Google Sign-Up Failed', error);
+      }
+    });
+  }, [response]);
 
   const onCreate = async () => {
     if (!email.trim() || !password) {
@@ -165,6 +180,26 @@ const SignUpScreen: React.FC = () => {
             <Text style={styles.primaryText}>{loading ? 'Creating Account...' : 'Create Account'}</Text>
           </TouchableOpacity>
 
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleBtn, (!request || googleLoading) && { opacity: 0.5 }]}
+            onPress={() => promptAsync()}
+            disabled={!request || googleLoading}
+          >
+            <Image
+              source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+              style={styles.googleIcon}
+            />
+            <Text style={styles.googleBtnText}>
+              {googleLoading ? 'Signing in...' : 'Continue with Google'}
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.bottomRow}>
             <Text style={styles.bottomText}>Already have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
@@ -202,6 +237,23 @@ const styles = StyleSheet.create({
   },
   primaryText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   terms: { color: '#6b7280', marginTop: 8, fontSize: 12 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+  dividerText: { color: '#9CA3AF', marginHorizontal: 10, fontSize: 13 },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 12,
+    elevation: 1,
+  },
+  googleIcon: { width: 20, height: 20, marginRight: 10 },
+  googleBtnText: { color: '#374151', fontWeight: '600', fontSize: 15 },
   bottomRow: { flexDirection: 'row', marginTop: 18, justifyContent: 'center', marginBottom: 20 },
   bottomText: { color: '#6b7280' },
   bottomAction: { color: '#10b981', fontWeight: '800' },

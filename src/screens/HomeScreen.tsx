@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Animated,
+  AppState,
+  AppStateStatus,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +15,7 @@ import {
 import ScreenWrapper from '../components/ScreenWrapper';
 import Card from '../components/ui/Card';
 import { getWasteIcon } from '../constants/wasteIcons';
+import { getDailyTip, getCarouselTips, EcoTip } from '../constants/ecoTips';
 import { useRequests } from '../context';
 import { useAuth } from '../context/AuthContext';
 import { getActiveRequest, getUserRequests, WasteRequest, subscribeToUserRequests } from '../services/requestService';
@@ -32,12 +35,13 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const { points, requests } = useRequests();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeRequest, setActiveRequest] = useState<WasteRequest | null>(null);
   const [recentRequests, setRecentRequests] = useState<WasteRequest[]>([]);
   const [fullName, setFullName] = useState<string>('');
   const [ecoPoints, setEcoPoints] = useState<number>(0);
-  const [unreadCount, setUnreadCount] = useState<number>(0);;
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [carouselTips, setCarouselTips] = useState<EcoTip[]>(getCarouselTips());
 
   // Subscribe to user data from Firestore
   React.useEffect(() => {
@@ -123,6 +127,14 @@ const HomeScreen: React.FC = () => {
     return () => animPoints.removeListener(id);
   }, [ecoPoints]);
 
+  // Refresh tip when app comes back to foreground (covers midnight case)
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') setCarouselTips(getCarouselTips());
+    });
+    return () => sub.remove();
+  }, []);
+
   const greeting = getGreeting(t);
   const firstName = fullName.split(' ')[0] || 'User';
 
@@ -203,41 +215,49 @@ const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Daily Eco-Tips */}
+        {/* Daily Eco Tips — horizontal carousel, first card is today's featured tip */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, {marginTop:18}]}>{t('home.dailyEcoTips')}</Text>
           <Text style={styles.dailyBadge}>{t('home.updatesDaily')}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:16, marginBottom:12}}>
-          <LinearGradient colors={['#10b981', '#059669']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginTop:8}]}>
-            <MaterialCommunityIcons name="recycle" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={styles.tipBadge}><Text style={styles.tipBadgeText}>{t('home.tip1badge')}</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip1')}</Text>
-            <View style={styles.tipFooter}>
-              <Text style={styles.tipFooterText}>{t('home.tip1impact')}</Text>
-            </View>
-          </LinearGradient>
-
-          <LinearGradient colors={['#3b82f6', '#2563eb']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
-            <MaterialCommunityIcons name="water" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>{t('home.tip2badge')}</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip2')}</Text>
-          </LinearGradient>
-
-          <LinearGradient colors={['#f59e0b', '#d97706']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
-            <MaterialCommunityIcons name="lightning-bolt" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>{t('home.tip3badge')}</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip3')}</Text>
-            <View style={styles.tipFooter}>
-              <Text style={styles.tipFooterText}>{t('home.tip3footer')}</Text>
-            </View>
-          </LinearGradient>
-
-          <LinearGradient colors={['#8b5cf6', '#7c3aed']} start={[0,0]} end={[1,1]} style={[styles.tipCard, {marginLeft: 12, marginTop:8}]}>
-            <MaterialCommunityIcons name="earth" size={80} color="rgba(255,255,255,0.1)" style={{position:'absolute', right:-10, top:-10}} />
-            <View style={[styles.tipBadge, {backgroundColor: 'rgba(255,255,255,0.25)'}]}><Text style={[styles.tipBadgeText, {color: '#fff'}]}>{t('home.tip4badge')}</Text></View>
-            <Text style={[styles.tipText, {color: '#fff'}]}>{t('home.tip4')}</Text>
-          </LinearGradient>
+          {carouselTips.map((tip, index) => {
+            const tipText = language === 'hi' ? tip.hi : language === 'mr' ? tip.mr : tip.en;
+            const footerText = tip.footer
+              ? (language === 'hi' ? tip.footer.hi : language === 'mr' ? tip.footer.mr : tip.footer.en)
+              : null;
+            return (
+              <LinearGradient
+                key={index}
+                colors={tip.gradient}
+                start={[0, 0]}
+                end={[1, 1]}
+                style={[styles.tipCard, index > 0 && {marginLeft: 12}, {marginTop: 8}]}
+              >
+                <MaterialCommunityIcons
+                  name={tip.icon as any}
+                  size={80}
+                  color="rgba(255,255,255,0.1)"
+                  style={{position: 'absolute', right: -10, top: -10}}
+                />
+                {/* First card gets a "Today's Tip" label */}
+                {index === 0 && (
+                  <View style={styles.featuredLabel}>
+                    <Text style={styles.featuredLabelText}>⭐ TODAY'S TIP</Text>
+                  </View>
+                )}
+                <View style={[styles.tipBadge, index > 0 && {backgroundColor: 'rgba(255,255,255,0.25)'}]}>
+                  <Text style={[styles.tipBadgeText, index > 0 && {color: '#fff'}]}>{tip.badge}</Text>
+                </View>
+                <Text style={styles.tipText}>{tipText}</Text>
+                {footerText && (
+                  <View style={styles.tipFooter}>
+                    <Text style={styles.tipFooterText}>{footerText}</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            );
+          })}
         </ScrollView>
 
         {/* Recent Activity */}
@@ -346,7 +366,9 @@ const styles = StyleSheet.create({
   pillTitle: { fontWeight: '700', color: '#111827' },
   pillSubtitle: { fontSize: 12, color: '#6b7280' },
 
-  tipCard: { width: 320, height: 180, borderRadius: 16, padding: 18, justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  tipCard: { width: 300, height: 190, borderRadius: 16, padding: 18, justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 6, overflow: 'hidden' },
+  featuredLabel: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  featuredLabelText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
   tipBadge: { backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, alignSelf: 'flex-start' },
   tipBadgeText: { fontSize: 10, color: '#10b981', fontWeight: '800', letterSpacing: 0.5 },
   tipText: { color: '#fff', fontSize: 16, fontWeight: '800', lineHeight: 24, marginTop: 8 },

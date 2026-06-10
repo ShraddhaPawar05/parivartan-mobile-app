@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { auth } from '../firebase/firebase';
+import { handleGoogleResponse, useGoogleAuth } from '../services/googleAuthService';
 import { createUserProfileIfNotExists } from '../services/userService';
 
 const SignInScreen: React.FC = () => {
@@ -22,9 +24,24 @@ const SignInScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [request, response, promptAsync] = useGoogleAuth();
+
+  console.log('[SignIn] request:', request ? 'READY' : 'NULL');
 
   const canContinue = email.trim().length > 0 && password.trim().length > 0;
+
+  useEffect(() => {
+    if (!response) return;
+    setGoogleLoading(true);
+    handleGoogleResponse(response).then(({ success, error }) => {
+      setGoogleLoading(false);
+      if (!success && error && error !== 'cancelled') {
+        Alert.alert('Google Sign-In Failed', error);
+      }
+    });
+  }, [response]);
 
   const onEmailSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -112,6 +129,26 @@ const SignInScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleBtn, (!request || googleLoading) && styles.disabled]}
+            onPress={() => promptAsync()}
+            disabled={!request || googleLoading}
+          >
+            <Image
+              source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+              style={styles.googleIcon}
+            />
+            <Text style={styles.googleBtnText}>
+              {googleLoading ? 'Signing in...' : 'Continue with Google'}
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.bottomRow}>
             <Text style={styles.bottomText}>New here? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
@@ -178,6 +215,23 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   disabled: { opacity: 0.5 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
+  dividerText: { color: '#9CA3AF', marginHorizontal: 10, fontSize: 13 },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 12,
+    elevation: 1,
+  },
+  googleIcon: { width: 20, height: 20, marginRight: 10 },
+  googleBtnText: { color: '#374151', fontWeight: '600', fontSize: 15 },
   bottomRow: { flexDirection: 'row', marginTop: 24, justifyContent: 'center' },
   bottomText: { color: '#6b7280' },
   bottomLink: { color: '#10b981', fontWeight: '800' },
